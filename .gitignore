@@ -3,3 +3,15 @@
 *.swo
 *~
 .env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Runtime state and config with credentials
+state/
+config/config.yaml

@@ -1,0 +1,103 @@
+# SOC 2 Jira Automation — Configuration
+# Copy to config/config.yaml and fill in your values.
+# Credentials use ${ENV_VAR} references — set them in your shell, not here.
+
+jira:
+  url: "https://meetearnest.atlassian.net"
+  project_key: "ESEC"
+  epic_key: "ESEC-XXX"           # The existing epic for this audit cycle
+  email: "${JIRA_EMAIL}"         # Your Jira account email
+  api_token: "${JIRA_API_TOKEN}" # Generate at https://id.atlassian.com/manage-profile/security/api-tokens
+
+audit:
+  year: 2026
+  period_start: "2025-10-01"
+  period_end: "2026-09-30"
+  firm_name: "Example Audit Firm LLP"
+  deadline_1:
+    date: "2026-11-15"
+    label: "deadline-nov-15"
+    description: "Policies, Configurations, Populations, IPE"
+  deadline_2:
+    date: "2026-12-15"
+    label: "deadline-dec-15"
+    description: "Sample Evidence"
+
+# Map team members to Jira account IDs.
+# Find account IDs: Jira → People → click user → the ID is in the URL.
+# Or use the API: GET /rest/api/3/user/search?query=<email>
+teams:
+  security:
+    label: "owner-security"
+    members:
+      - name: "Alex Garcia"
+        jira_account_id: "5f1234567890abcdef123456"
+  engineering:
+    label: "owner-engineering"
+    members:
+      - name: "Sam Chen"
+        jira_account_id: "5f2345678901bcdefg234567"
+  infrastructure:
+    label: "owner-infrastructure"
+    members:
+      - name: "Jordan Lee"
+        jira_account_id: "5f3456789012cdefgh345678"
+  it-ops:
+    label: "owner-it-ops"
+    members:
+      - name: "Casey Jones"
+        jira_account_id: "5f4567890123defghi456789"
+  hr:
+    label: "owner-hr"
+    members:
+      - name: "Morgan Taylor"
+        jira_account_id: "5f5678901234efghij567890"
+
+# In-scope systems — these are used to split multi-system requests into per-system tasks.
+systems:
+  - name: "SLO Platform"
+    label: "system-slo-platform"
+  - name: "Data Pipeline"
+    label: "system-data-pipeline"
+  - name: "Customer Portal"
+    label: "system-customer-portal"
+
+# Issue type names as they appear in your Jira project.
+# If your project uses different names, update these.
+issue_types:
+  story: "Story"
+  task: "Task"
+  subtask: "Sub-task"       # Used in classic (company-managed) projects
+
+# Custom field IDs — only needed for classic (company-managed) projects.
+# In next-gen (team-managed) projects, epic linking uses the parent field automatically.
+# Find custom field IDs: GET /rest/api/3/field | grep -i epic
+custom_fields:
+  epic_link: "customfield_10014"
+
+# Control family mappings.
+# The key is the prefix from the auditor's control IDs (e.g., CM, LS, CO).
+# area: used in label generation (e.g., cm-change-mgmt)
+# full_name: used in display text
+control_families:
+  CM:
+    area: "change-mgmt"
+    full_name: "Change Management"
+  LS:
+    area: "logical-sec"
+    full_name: "Logical Security"
+  CO:
+    area: "comm-ops"
+    full_name: "Communications & Operations"
+  IT:
+    area: "integrity-tools"
+    full_name: "Integrity Tools"
+  EL:
+    area: "entity-level"
+    full_name: "Entity Level Controls"
+  AC:
+    area: "access-control"
+    full_name: "Access Control"
+  RM:
+    area: "risk-mgmt"
+    full_name: "Risk Management"

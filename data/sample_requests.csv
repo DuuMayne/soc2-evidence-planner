@@ -1,0 +1,19 @@
+Request #,Control ID,Control Name,Evidence Description,Evidence Type,System(s),Deadline,Owner
+1,CM.01,SDLC and Change Management Process,"Provide the SDLC and change management policy",Policy,,1,Sam Chen
+2,CM.02,Change Documentation,"Provide a population of all changes deployed to production during the audit period",Population,All in-scope systems,1,Sam Chen
+3,CM.02,Change Documentation,"Provide IPE for the change population including parameters, row count, and system clock",IPE,All in-scope systems,1,Sam Chen
+4,CM.02,Change Documentation,"For samples selected by auditor, provide change tickets showing approval and testing",Sample,All in-scope systems,2,Sam Chen
+5,LS.01,Password Configuration,"Provide screenshots of password configuration settings","Screenshot","Okta, Google Workspace",1,Casey Jones
+6,LS.02,User Access Provisioning,"Provide a population of all new user access requests during the audit period",Population,All in-scope systems,1,Casey Jones
+7,LS.02,User Access Provisioning,"Provide IPE for the access provisioning population",IPE,All in-scope systems,1,Casey Jones
+8,LS.02,User Access Provisioning,"Provide the access management policy",Policy,,1,Casey Jones
+9,LS.02,User Access Provisioning,"For samples selected by auditor, provide access approval tickets",Sample,All in-scope systems,2,Casey Jones
+10,LS.04,User Termination,"Provide a population of all terminated employees during the audit period",Population,,1,Morgan Taylor
+11,LS.04,User Termination,"For samples selected, provide evidence of access removal within 1 business day",Sample,,2,Casey Jones
+12,CO.04,Network Security,"Provide screenshots of firewall rules and security group configurations",Screenshot,All in-scope systems,1,Jordan Lee
+13,CO.09,Incident Response,"Provide the security incident response policy and plan",Policy,,1,Alex Garcia
+14,CO.09,Incident Response,"Provide a population of all security incidents during the audit period",Population,,1,Alex Garcia
+15,IT.06,Vulnerability Management,"Provide vulnerability scan reports for sample months selected by auditor",Report,,2,Alex Garcia
+16,EL.01,Organizational Structure,"Provide a current organizational chart",Screenshot,,1,Morgan Taylor
+17,EL.07,Vendor Management,"Provide the vendor management policy",Policy,,1,Alex Garcia
+18,EL.07,Vendor Management,"Provide evidence of annual vendor risk assessments for critical vendors",Report,,1,Alex Garcia
