@@ -305,6 +305,68 @@ Each entry follows this structure:
 
 ---
 
+## Policy Documentation (Confluence Sweep)
+
+### ESEC-140: SDLC & Change Management Policy
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Source systems:** Confluence Cloud REST API + PDF policy documents
+- **Automation:** `collectors/replace_policy_evidence.py`
+- **Collection steps:**
+  1. CQL search across 6 Confluence spaces (EN, SEC, POL, IN, ITO, Enablement) with 42 search terms
+  2. Page tree traversals for Engineering Home, Security@Earnest, POL space (14 trees)
+  3. Pull metadata for each page: `GET /wiki/rest/api/content/{id}?expand=version,history,space,ancestors`
+  4. Map pages to ESEC tickets by relevance (best-fit matching)
+  5. All stale policy pages refreshed on 2026-09-03
+  6. Upload evidence: policy_mapping.csv + IPE + relevant PDFs
+- **Output directory:** `evidence/confluence/policy_sweep/`
+- **Output files:** `policy_mapping.csv` (49 page-to-ticket mappings), `IPE_documentation.txt`
+- **PDF evidence:** Earnest SDLC Policy (Navient format), Navient CISP, Docker/K8s Security, Definition of Done, JIRA Practices
+- **Confluence pages:** 14 pages — SDLC Policy, SDLC Process, Change Mgmt, Release Mgmt, Infra Change Mgmt, Code Review, Peer Review, Definition of Done, Eng Release Process, Navient SDLC, JIRA Practices, Going Merry Addendum, Data Broker Change Mgmt, SDLC Refresh
+- **Lessons learned:**
+  - 36 of 49 original pages were stale (pre audit period) — all 24 critical ones refreshed 2026-09-03
+  - Navient CISP (55pp) is the most comprehensive parent policy — maps to 6 of 7 tickets
+  - Use `replace_policy_evidence.py` for future refreshes — handles delete + re-upload + comment in one pass
+  - Old attachments must be deleted before re-uploading to avoid duplicates (GET attachment list, DELETE by ID)
+
+### ESEC-165: Network Authentication Policy
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 6 pages — DLP Plan, Data Classification, Key Management, Transit Gateway VPN, AWS Security Standard, InfoSec Programs
+- **PDF evidence:** Navient CISP, Navient AUP, Wireless LAN Security Standard, BYOD Policy
+
+### ESEC-175: Access Management Policy
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 5 pages — User Access Mgmt Procedure, Access Reviews (DRAFT), Privilege Access Mgmt, SailPoint Certifications, Clean Desk Policy
+- **PDF evidence:** Navient CISP, Navient AUP, IAM Policy, BYOD Policy
+
+### ESEC-188: Database Rules Document
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 3 pages — Database Guidelines, ERD Review Process, ERD Training & Resources
+- **PDF evidence:** None (Confluence pages only)
+
+### ESEC-194: Network Traffic Settings Policy
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 5 pages — Cloudflare Runbook, WAF Rule Standardization, Docker/K8s Security, AWS Security Standard, Transit Gateway VPN
+- **PDF evidence:** Navient CISP, Wireless LAN Security Standard, Docker/K8s Security
+
+### ESEC-255: Vulnerability Management Policy
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 5 pages — Vulnerability Management (POL), Vulnerability Management (SEC), Container Image Vuln Mgmt, Patch Management SLA, Supply Chain Attacks Prevention
+- **PDF evidence:** Navient CISP
+
+### ESEC-262: IT CP & IT DRP
+- **Evidence type:** Policy
+- **Status:** ✅ Done
+- **Confluence pages:** 11 pages — IT CP/DRP master + 5 sections + 3 appendices, BC/DR, Incident Response Plan
+- **PDF evidence:** Navient CISP, Physical Security Policy, Section 3 Incident Management
+
+---
+
 ## Tickets Not Yet Addressed
 
 ### Password & Authentication (ESEC-164)
@@ -332,11 +394,7 @@ Each entry follows this structure:
 - **ESEC-208, 209, 210:** Asset disposal records → manual/IT process
 
 ### Other
-- **ESEC-140:** SDLC & Change Management policy → policy document
 - **ESEC-163:** Security update PowerPoints → manual collection
-- **ESEC-165:** Network authentication policy → policy document
-- **ESEC-175:** Access management policy → policy document
-- **ESEC-194:** Network traffic settings policy → policy document
 - **ESEC-195:** Security group VPN-only access → AWS VPC/SG screenshot
 - **ESEC-236:** Incident response samples → depends on auditor selection
 - **ESEC-244:** Performance reviews → HR process
