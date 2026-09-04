@@ -28,77 +28,60 @@ Each entry follows this structure:
 
 ## Change Management (ESEC-141)
 
-### ESEC-142: Req 27 — SLO Platform Change Population
+### ESEC-142–147: Req 27 — Change Populations (per product)
 - **Evidence type:** Population
-- **Status:** ⬜ To Do (evidence collected but upload reversed pending repo mapping)
-- **Source systems:** Jira Cloud API
-- **Automation:** `collectors/jira_collector.py` → `collect_change_populations()`
+- **Status:** ✅ Done (GitHub-based, 6 products)
+- **Source systems:** GitHub Search API via `gh` CLI
+- **Decision:** Switched from Jira tickets to GitHub PRs as source of truth — more complete coverage, limits auditor exposure to observation window only
+- **Repo mapping:** `~/Downloads/Repo List with Unit Test Coverage .xlsx` — team sheets map repos to products
 - **Collection steps:**
-  1. Query Jira: `GET /rest/api/3/search/jql` with JQL: `project = SLO2 AND status = Done AND resolved >= "2025-10-01" AND resolved <= "2026-09-30" ORDER BY resolved DESC`
-  2. Paginate using `nextPageToken` (cursor-based, NOT startAt)
-  3. Export fields: key, summary, status, priority, assignee, reporter, created, resolved, labels, components
-  4. Write to `change_population_SLO2.csv`
-- **Output files:** `change_population_SLO2.csv`
-- **IPE requirements:** Query parameters, row count, timestamp, pagination completeness assertion
+  1. For each product's repos (from mapping spreadsheet):
+     `gh search prs "repo:meetearnest/{repo}" --merged --merged-at "2025-10-01..2026-09-04" --limit 1000 --json repository,number,title,url,author,updatedAt`
+  2. Parse and combine into per-product CSVs
+- **Output directory:** `evidence/github/`
+- **Output files and counts:**
+  - `slo_platform_change_population.csv` — 388 PRs (15 repos)
+  - `schoolhub_spoke_change_population.csv` — 204 PRs (4 repos)
+  - `cashi_change_population.csv` — 140 PRs (1 repo)
+  - `mmax_change_population.csv` — 216 PRs (18 repos)
+  - `servicing_platform_change_population.csv` — 508 PRs (12 repos)
+- **Files.com:** ESEC-146 uses vendor change logs (not GitHub) — evidence in Google Drive
 - **Lessons learned:**
-  - SLO project key is `SLO2`, not `SLO` (which doesn't exist)
-  - Must use cursor-based pagination — `startAt` silently caps at first page
-  - Change population upload reversed pending confirmed repo→system mapping
-
-### ESEC-143: Req 27 — SchoolHub Change Population
-- **Evidence type:** Population
-- **Status:** ⬜ To Do (same as ESEC-142)
-- **Source systems:** Jira Cloud API
-- **Automation:** Same as ESEC-142
-- **Collection steps:** Same as ESEC-142 but with `project = ENG`
-- **Lessons learned:** SchoolHub is tracked in `ENG` project (Going Merry Engineering), not a `SHUB` project
-
-### ESEC-144: Req 27 — CASHI Change Population
-- **Source systems:** Jira Cloud API
-- **Collection steps:** Same as ESEC-142 but with `project = NEW` (New Products)
-
-### ESEC-145: Req 27 — MMAX Change Population
-- **Source systems:** Jira Cloud API
-- **Collection steps:** Same as ESEC-142 but with `project = PL` (Personal Loans)
-
-### ESEC-146: Req 27 — Files.com Change Population
-- **Source systems:** Jira Cloud API
-- **Collection steps:** Same as ESEC-142 but with `project = INF` (Infrastructure)
-
-### ESEC-147: Req 27 — Servicing Platform Change Population
-- **Source systems:** Jira Cloud API
-- **Collection steps:** Same as ESEC-142 but with `project IN (SIT, NS)`
+  - GitHub Search API rate limits at ~30 req/min for search — add retries with backoff
+  - Some repos return 403 briefly then succeed on retry
+  - GitHub yields more complete change populations than Jira (388 PRs vs 107 tickets for SLO)
+  - `--merged-at` filter defines the observation window — critical for limiting auditor scope
+  - Product definitions: CASHI = Certification Approval School Hub Interface, MMAX = School Success Disbursement Platform, SchoolHub = also called Spoke
 
 ### ESEC-148: Req 28 — IPE for All Change Populations
 - **Evidence type:** IPE
-- **Status:** ⬜ To Do
-- **Source systems:** Generated from collection metadata
-- **Collection steps:**
-  1. Aggregate query parameters, row counts, timestamps from all population collections
-  2. Assert pagination completeness (all `nextPageToken`s exhausted, `isLast: true`)
-  3. Document data path: Jira REST API → HTTPS → JSON → CSV
-  4. Include authentication method and Jira account identity
-- **Output files:** `IPE_documentation.txt`, `IPE_documentation.json`
+- **Status:** ✅ Done (included in GitHub pull metadata)
 
 ### ESEC-149: Req 29 — Change Ticket Samples
 - **Evidence type:** Sample
 - **Status:** ⬜ To Do (depends on auditor sample selection)
 - **Source systems:** Jira Cloud API + GitHub API
-- **Collection steps:**
-  1. Auditor selects N tickets from population
-  2. For each ticket: pull full Jira issue with all fields, comments, attachments
-  3. Cross-reference with GitHub PR: search `gh pr list --search "TICKET-KEY" --repo meetearnest/<repo>`
-  4. Pull PR details: approval reviews, merge commit, branch protection status
-  5. Build correlation: Jira ticket → GitHub PR → approval → merge
-- **Lessons learned:** Use `gh` CLI (authenticated as DuuMayne) instead of PAT for GitHub — PAT rate limits at 5000/hr
+- **Collection steps:** When auditor selects PRs from population:
+  1. Pull full PR details: `gh pr view {num} --repo meetearnest/{repo} --json`
+  2. Pull review approvals: `gh api repos/meetearnest/{repo}/pulls/{num}/reviews`
+  3. Cross-reference with Jira ticket if linked in PR title
+  4. Build correlation: GitHub PR → review approval → merge → (optional) Jira ticket
 
 ---
 
 ## Environment Segregation (ESEC-150)
 
+### ESEC-150: CM.07 — Environment Segregation (parent)
+- **Evidence type:** Config
+- **Status:** ✅ Done
+- **Source systems:** AWS Organizations, EC2
+- **Output directory:** `evidence/aws/env_segregation/`
+- **Output files:** `aws_organization_accounts.csv` (22 accounts), `vpc_configurations.csv` (10 VPCs), `environment_resource_inventory.csv`, `system_resource_mapping.csv`, `IPE_documentation.txt`
+- **Key evidence:** 22 AWS accounts including dedicated Production (075440130607), Development (747722821363), Staging (831351477977), Sandbox, Alpha, and Logging accounts. VPCs use non-overlapping CIDR ranges.
+
 ### ESEC-151 through ESEC-156: Req 35 — Environment Segregation (per system)
 - **Evidence type:** Screenshot/Config
-- **Status:** 🔄 In Progress (evidence collected and uploaded)
+- **Status:** ✅ Done
 - **Source systems:** AWS Organizations API, AWS EC2/EKS/RDS APIs
 - **Automation:** Manual collection via AWS CLI (not yet in collector)
 - **Collection steps:**
@@ -200,6 +183,27 @@ Each entry follows this structure:
 
 ## Network & Firewall (ESEC-191)
 
+### ESEC-191: LS.12 — Network Security Configuration
+- **Evidence type:** Config
+- **Status:** ✅ Done (post-remediation re-pull 2026-09-04)
+- **Source systems:** AWS EC2 API (Production 075440130607)
+- **Collection steps:**
+  1. `aws ec2 describe-security-groups --region us-east-1 --profile production` → 216 SGs
+  2. `aws ec2 describe-network-acls --region us-east-1 --profile production` → 9 NACLs
+  3. Parse all inbound rules (1,232 total), flag public ingress (0.0.0.0/0)
+  4. Verify remediation of 8 previously-flagged orphaned SGs
+- **Output directory:** `evidence/aws/network_security/`
+- **Output files:** `security_groups.csv`, `security_group_rules_detail.csv`, `network_acls.csv`, `IPE_documentation.txt`
+- **Key findings:**
+  - 43 SGs with public ingress — all legitimate (ALB/ELB 80/443, K8s ingress, Banyan access tiers)
+  - 7/8 orphaned SGs removed by infra. 1 remaining is default VPC SG (cannot be deleted)
+  - All 9 NACLs have deny-all default rules (rule 32767 DENY ALL)
+  - No SSH (22), RDP (3389), or database ports exposed to 0.0.0.0/0
+- **Lessons learned:**
+  - Always check for orphaned SGs (created by launch wizards, OpsWorks, etc.) before presenting to auditors
+  - Flag remediation items early — infra team needs lead time to review and delete
+  - Default VPC SG (sg-0d2f0bee1aaf60b7e) can't be deleted, but it has no custom rules
+
 ### ESEC-192: Req 92 — Network Diagram
 - **Evidence type:** Diagram
 - **Status:** 🔄 In Progress (raw data collected, needs visual diagram)
@@ -215,64 +219,76 @@ Each entry follows this structure:
 
 ### ESEC-193: Req 93 — Firewall Deny-All Rules
 - **Evidence type:** Config
-- **Status:** 🔄 In Progress
+- **Status:** ✅ Done (covered by ESEC-191 network_acls.csv showing deny-all defaults)
+
+### ESEC-195: Req 95 — Security Group VPN-Only Access
+- **Evidence type:** Config
+- **Status:** ✅ Done (post-remediation)
 - **Source systems:** AWS EC2 API
-- **Collection steps:**
-  1. `aws ec2 describe-security-groups --region <region> --profile production`
-  2. Parse all inbound/outbound rules
-  3. Export to `security_group_rules.csv` (1,327 rules)
-- **Automation:** `collectors/aws_collector.py` → `collect_security_groups()`
+- **Output directory:** `evidence/aws/network_security/` (shared with ESEC-191)
 
 ---
 
 ## Security Incidents (ESEC-232)
 
-### ESEC-233: Req 138 — Security Incidents Population
-- **Evidence type:** Population
-- **Status:** 🔄 In Progress
-- **Source systems:** Jira Cloud API
-- **Automation:** `collectors/jira_collector.py` → `collect_security_incidents()`
-- **Collection steps:**
-  1. Query three Jira projects for incidents in audit period:
-     - `project = ESEC AND issuetype IN (Alert, Incident)` → ESEC alerts/incidents
-     - `project = INC` → operational incidents
-     - `project = SEC AND issuetype = Bug` → security bugs
-  2. Merge and deduplicate across projects
-  3. Export: `security_incidents_ALL.csv` (178 total), per-project CSVs
-- **Output files:** `security_incidents_ALL.csv`, `security_incidents_ESEC.csv`, `security_incidents_INC.csv`, `security_incidents_SEC.csv`
-
-### ESEC-234: Req 139 — IPE for Security Incidents
-- **Status:** 🔄 In Progress
-- **Output files:** `IPE_documentation.txt`
-
-### ESEC-235: Req 140 — No Incidents Confirmation
-- **Status:** 🔄 In Progress (incidents DO exist — CSV shows 178 items)
+### ESEC-233–236: Req 138–141 — Security Incidents
+- **Evidence type:** Population / IPE / Samples
+- **Status:** ⬜ To Do (evidence cleared — user building manually)
+- **Decision:** All automated incident evidence was removed. User will build the incident population manually to:
+  - Include Slack-only incidents that don't have Jira tickets
+  - Exclude incidents without full PIR documentation
+  - Exclude still-open incidents
+  - Control auditor exposure to the incident portfolio
+- **Lessons learned:**
+  - Automated Jira pulls captured 178 items including alerts, bugs, and operational incidents — too broad
+  - Auditors only need to see incidents with complete post-incident reviews (PIRs)
+  - If "no incidents" applies, need confirmation from 2 individuals (Req 140)
+  - Better to curate manually than show auditors unfinished work
 
 ---
 
-## Backups (ESEC-263 / ESEC-266)
+## Backups (ESEC-263 / ESEC-265–268)
 
-### ESEC-264: Req 212 — Server Backup Listings
+### ESEC-265: Req 212 — Server Backup Listings
 - **Evidence type:** Population
 - **Status:** ✅ Done
-- **Source systems:** AWS RDS API
-- **Automation:** `collectors/aws_collector.py` → `collect_backup_configs()`
+- **Source systems:** AWS RDS API, AWS Backup
 - **Collection steps:**
   1. `aws rds describe-db-instances --region us-east-1 --profile production` → 25 instances
   2. Extract backup config: `BackupRetentionPeriod`, `PreferredBackupWindow`, `LatestRestorableTime`
-  3. `aws rds describe-db-snapshots --snapshot-type automated --region us-east-1` → 230 snapshots
-- **Output files:** `rds_backup_configs.csv`, `rds_automated_snapshots.csv`
+  3. `aws backup list-backup-plans --profile production` → 3 backup plans
+- **Output directory:** `evidence/aws/backup_monitoring/`
+- **Output files:** `rds_backup_configs.csv`, `backup_plans.json`
+
+### ESEC-266: Req 213 — Backup Config & Summary Samples
+- **Evidence type:** Sample
+- **Status:** ✅ Done (auditor selects specific servers)
+- **Source systems:** AWS RDS API
 
 ### ESEC-267: Req 214 — Backup Failures List
 - **Evidence type:** Population
-- **Status:** 🔄 In Progress
+- **Status:** ✅ Done
 - **Source systems:** AWS RDS API
-- **Automation:** `collectors/aws_collector.py` → `collect_backup_failures()`
 - **Collection steps:**
   1. `aws rds describe-events --source-type db-instance --event-categories backup --duration 20160` (14 days)
   2. Filter for failure events → none found
-  3. Write `no_backup_failures.txt` confirmation + `backup_events.csv` (236 events, all success)
-- **Output directory:** `evidence/aws/backup_events_fix/`
+  3. Write `no_backup_failures.txt` confirmation + `backup_events.csv` (244 events, all success)
+- **Output directory:** `evidence/aws/backup_production/`
+
+### ESEC-268: Backup Monitoring Configuration
+- **Evidence type:** Config
+- **Status:** ✅ Done
+- **Source systems:** AWS RDS Event Subscriptions, AWS Backup Vault Notifications
+- **Collection steps:**
+  1. `aws rds describe-event-subscriptions --profile production` → 11 subscriptions
+  2. `aws backup list-backup-vaults --profile production` + `get-backup-vault-notifications` per vault
+  3. Verify BACKUP_JOB_FAILED events route to SNS → PagerDuty/email
+- **Output directory:** `evidence/aws/backup_monitoring/`
+- **Output files:** `rds_event_subscriptions.csv`, `backup_vault_notifications.json`
+- **Lessons learned:**
+  - Security-dev account had zero monitoring — always pull from production for evidence
+  - Production has comprehensive alerting: 11 RDS event subs + vault notifications
+  - Always verify AWS account ID in evidence (burned once pulling from wrong account)
 
 ---
 
@@ -367,6 +383,139 @@ Each entry follows this structure:
 
 ---
 
+## Secure Data Transmission (ESEC-223)
+
+### ESEC-224: Req 132 — Secure Transmission Configurations
+- **Evidence type:** Config
+- **Status:** 🔄 In Progress (AWS done, needs tool-specific screenshots)
+- **Source systems:** AWS ACM, ELBv2, CloudFront
+- **Collection steps:**
+  1. `aws acm list-certificates --certificate-statuses ISSUED --profile production` → 10 certs
+  2. `aws acm describe-certificate --certificate-arn <arn>` for each → full TLS details
+  3. `aws elbv2 describe-load-balancers --profile production` → 52 load balancers
+  4. `aws elbv2 describe-listeners --load-balancer-arn <arn>` for each → 68 listeners (44 HTTPS/TLS)
+  5. `aws cloudfront list-distributions --profile production` → 0 distributions (not used in prod account)
+- **Output directory:** `evidence/aws/secure_transmission/`
+- **Output files:** `acm_certificates.csv`, `alb_tls_configurations.csv`, `cloudfront_no_distributions.txt`, `IPE_documentation.txt`
+- **Still needed:** Tool-specific TLS configs for Airflow, Looker, Sign Service, Files.com (stakeholder screenshots)
+- **Lessons learned:**
+  - CloudFront returned empty response (not error) when no distributions exist — handle gracefully
+  - SSL policy names on ALB listeners (e.g., `ELBSecurityPolicy-TLS13-1-2-2021-06`) are the key evidence for TLS version enforcement
+
+---
+
+## Scheduled Jobs (ESEC-225)
+
+### ESEC-226: Req 133 — Scheduled Jobs Configuration
+- **Evidence type:** Config
+- **Status:** 🔄 In Progress (AWS done, needs tool-specific configs)
+- **Source systems:** AWS EventBridge
+- **Collection steps:**
+  1. `aws events list-rules --profile production` → 59 rules (47 scheduled, 12 event-driven)
+  2. `aws events list-targets-by-rule --rule <name>` for each scheduled rule → target mappings
+  3. `aws scheduler list-schedules --profile production` → 0 schedules (Scheduler service not used)
+- **Output directory:** `evidence/aws/scheduled_jobs/`
+- **Output files:** `eventbridge_rules.csv`, `eventbridge_rule_targets.csv`, `IPE_documentation.txt`
+- **Still needed:** Tool-specific job configs for Airflow, Looker, Sign Service, Files.com
+
+---
+
+## Separation of Duties (ESEC-157)
+
+### ESEC-157: CM.08 — Production Change Separation of Duties
+- **Evidence type:** Config/Data
+- **Status:** ✅ Done
+- **Source systems:** GitHub API via `gh` CLI
+- **Collection steps:**
+  1. For each in-scope product (SLO, Servicing, CASHI, MMAX, SchoolHub):
+     - Select key repos from the product mapping
+     - `gh pr list --repo meetearnest/{repo} --state merged --limit 5 --json number,title,author`
+     - `gh api repos/meetearnest/{repo}/pulls/{num}/reviews --jq '[.[] | {state, user: .user.login}]'`
+  2. Compare PR author against reviewers — check for self-approval
+  3. Export: `pr_review_separation_of_duties.csv` (75 PRs sampled)
+- **Output directory:** `evidence/github/`
+- **Output files:** `pr_review_separation_of_duties.csv`, `IPE_separation_of_duties.txt`
+- **Key findings:** 75/75 PRs (100%) had approval from someone other than the author
+- **Lessons learned:**
+  - Branch protection API returns 404 for non-admin users — use PR review data instead
+  - Some repos use `master` as default, others use `main` — check with `gh api repos/meetearnest/{repo} --jq '.default_branch'`
+  - Org-level rulesets require `admin:org` scope — noted as limitation
+
+---
+
+## Change Populations via GitHub (ESEC-141/142–148)
+
+### Change Population Collection (GitHub-based)
+- **Evidence type:** Population
+- **Status:** ✅ Done (6 products)
+- **Source systems:** GitHub Search API via `gh` CLI
+- **Decision:** Used GitHub PRs (not Jira tickets) as source of truth for code changes — gives broader coverage and limits auditor exposure to the observation window only
+- **Collection steps:**
+  1. Load repo-to-product mapping from "Repo List with Unit Test Coverage .xlsx"
+  2. For each product's repos:
+     `gh search prs "repo:meetearnest/{repo}" --merged --merged-at "2025-10-01..2026-09-04" --limit 1000`
+  3. Extract: repo, pr_number, title, url, author, merged_date
+  4. Write per-product CSV
+- **Output directory:** `evidence/github/`
+- **Output files:**
+  - `slo_platform_change_population.csv` — 388 PRs
+  - `schoolhub_spoke_change_population.csv` — 204 PRs
+  - `cashi_change_population.csv` — 140 PRs
+  - `mmax_change_population.csv` — 216 PRs
+  - `servicing_platform_change_population.csv` — 508 PRs
+- **Lessons learned:**
+  - GitHub Search API rate limits at ~30 req/min for search — add retries with backoff
+  - Some repos return 403 briefly then succeed on retry (e.g., `partner`, `lfm-integration-service`)
+  - Repo names don't always match product names — mapping spreadsheet is essential
+  - `--merged-at` filter defines the observation window precisely — no need to filter post-query
+  - GitHub yields more complete change populations than Jira (388 PRs vs 107 Jira tickets for SLO)
+
+---
+
+## VPN & MFA (ESEC-178/179)
+
+### ESEC-179: Req 72 — VPN & MFA Evidence
+- **Evidence type:** Config/Screenshot
+- **Status:** ✅ Done
+- **Source systems:** Okta API + Pritunl VPN
+- **Collection steps:**
+  1. Okta API pulls (requires SSWS token):
+     - `GET /api/v1/policies?type=OKTA_SIGN_ON` → sign-on policies
+     - `GET /api/v1/policies?type=MFA_ENROLL` → MFA enrollment policies
+     - `GET /api/v1/org/factors` → configured authenticators
+  2. Manual screenshots:
+     - VPN MFA prompt (Pritunl → Okta challenge)
+     - Okta MFA enrollment settings
+  3. Combine into `vpn_mfa_combined/` directory
+- **Output directory:** `evidence/vpn_mfa_combined/`
+- **Output files:** `okta_mfa_policies.csv`, `okta_signon_policies.csv`, `okta_authenticators.csv`, `vpn_restricted_security_groups.csv`, `IPE_documentation.txt`, screenshots
+- **Lessons learned:**
+  - macOS `cp` fails with special characters in screenshot filenames — use Python `shutil.copy2(glob.glob(...)[0], dest)`
+  - Okta API token provided at session start by user, never stored to disk
+  - VPN SGs already demonstrated in network security evidence — linked rather than duplicated
+
+---
+
+## Full-Device Encryption (ESEC-227)
+
+### ESEC-228–231: CO.08 — Iru MDM / FileVault
+- **Evidence type:** Population / Config / Screenshot
+- **Status:** ✅ Done
+- **Source systems:** Iru MDM (managed.iru.online)
+- **Collection steps:**
+  1. Export device population from Iru admin console → `All Devices - 2026-09-04.csv` (354 devices)
+  2. Screenshot FileVault enforcement settings in Kandji profiles
+  3. Screenshot device export process for IPE
+- **Output directory:** `~/Downloads/Iru/`
+- **Key findings:**
+  - 354 total devices; 41 stale (>30 days since last check-in) — likely former employees or storage
+  - FileVault enforced via Kandji MDM profiles across all managed Macs
+- **Lessons learned:**
+  - No Iru API available — evidence is manual exports and screenshots
+  - Always note stale devices in comments to preempt auditor questions
+
+---
+
 ## Tickets Not Yet Addressed
 
 ### Password & Authentication (ESEC-164)
@@ -393,14 +542,32 @@ Each entry follows this structure:
 ### Asset Disposal (ESEC-207)
 - **ESEC-208, 209, 210:** Asset disposal records → manual/IT process
 
-### Other
-- **ESEC-163:** Security update PowerPoints → manual collection
-- **ESEC-195:** Security group VPN-only access → AWS VPC/SG screenshot
-- **ESEC-236:** Incident response samples → depends on auditor selection
-- **ESEC-244:** Performance reviews → HR process
-- **ESEC-246:** Finwise MSA/OAB → contract document
-- **ESEC-265:** Backup config & summary logs samples → depends on auditor selection
-- **ESEC-268:** Backup failure ticket samples → depends on auditor selection
+### Stakeholder-Dependent
+- **ESEC-163:** Security update PowerPoints → manual collection (sample months: Oct 2025, Dec 2025, Jun 2026)
+- **ESEC-190:** Splunk/New Relic auto-update settings → Jason Kennedy screenshot
+- **ESEC-217:** Splunk log edit permissions → Jason Kennedy screenshot
+- **ESEC-218/219/220:** Splunk user listing + IPE → Jason Kennedy
+- **ESEC-221/222:** UniFi network security settings → Tyler Yates / Gaige
+- **ESEC-238:** IT Ops org chart → HR/leadership
+- **ESEC-240:** Background check samples → HR
+- **ESEC-241/242:** Independent contractor population + IPE → HR
+- **ESEC-244:** Performance reviews → HR
+- **ESEC-250:** Downtime/patching alerts → PagerDuty/status page team
+
+### Auditor-Selection (Req 2 deadline: 9/30)
+- **ESEC-149:** Change ticket samples → auditor selects from population
+- **ESEC-172/173/174:** Access approval samples → auditor selects
+- **ESEC-177:** Termination access removal samples → auditor selects
+- **ESEC-182/184:** Access review remediation samples → auditor selects
+- **ESEC-203:** Files.com account creation ticket samples → auditor selects
+- **ESEC-236:** Incident response samples → user building manually
+- **ESEC-266:** Backup config/summary log samples → auditor selects
+
+### Known Gaps / Planned
+- **ESEC-257/258:** Tabletop exercise → planned for before month end
+- **ESEC-260:** Penetration test report → running but not remediated before month end
+- **ESEC-261:** BC/DR → possible to use existing BC/DR simulation
+- **ESEC-245:** Finwise MSA/OAB contract → contract document
 
 ---
 
@@ -434,9 +601,20 @@ Each entry follows this structure:
 ### AWS
 - **Auth:** AWS SSO via IAM Identity Center (d-90676c4cd0.awsapps.com/start)
 - **Profiles:** `production` (075440130607), `security-dev` (747722821363)
-- **Regions:** `us-east-1` (primary), `us-west-2` (secondary)
+- **CRITICAL:** Always use `AWS_PROFILE=production` for evidence. Verify with `aws sts get-caller-identity`.
+- **Regions:** `us-east-1` (primary), `us-west-2` (secondary), CloudFront is global
 - **Session duration:** ~24 hours — must re-auth each day
-- **Key services:** Organizations, EC2 (VPCs, SGs, subnets), EKS, RDS
+- **Organization:** 22 accounts (Production, Development, Staging, Sandbox, Alpha, Logging, etc.)
+- **Key services and commands:**
+  - Organizations: `aws organizations list-accounts`
+  - EC2: `describe-vpcs`, `describe-security-groups`, `describe-network-acls`, `describe-subnets`
+  - EKS: `list-clusters`, `describe-cluster`, `list-updates`, `describe-update`
+  - RDS: `describe-db-instances`, `describe-events`, `describe-event-subscriptions`
+  - ACM: `list-certificates`, `describe-certificate`
+  - ELBv2: `describe-load-balancers`, `describe-listeners`
+  - CloudFront: `list-distributions` (returns empty if none exist — not an error)
+  - EventBridge: `list-rules`, `list-targets-by-rule`
+  - Backup: `list-backup-plans`, `list-backup-vaults`, `get-backup-vault-notifications`
 
 ---
 
