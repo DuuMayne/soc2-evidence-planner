@@ -223,7 +223,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - Rewrote vulnerability management narrative to incorporate Keystone program (governance, tooling, remediation outcomes, verification process)
 - Updated narrative with specific channel export cross-references
 
-### September 9, 2026
+### September 9, 2026 (Session 1)
 **Tickets closed:** ESEC-190, 189, 217, 218, 219, 216, 249, 224, 223, 226, 225 (11 tickets)
 - User provided 4 desktop files: Keystone Swarm Export PDF (20 pages), SOC 2 Evidence Canvas PDF, Upgrade Dependencies Canvas PDF, channel screenshot
 - Built unified vulnerability management evidence packet (`00_VULNERABILITY_MANAGEMENT_PACKET.md`) combining all sources:
@@ -239,6 +239,37 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - Uploaded user evidence to ESEC-217/218/219 (CO.02 audit log protection) — CrowdStrike cloud-hosted = immutable logs
 - Closed bonus parent tickets (IT.01, CO.06, CO.07) that had all children done
 - Learned: CrowdStrike replaced Splunk as SIEM in January 2026 (contract signing), not just November 2025 (Spotlight activation)
+
+### September 9, 2026 (Session 2 — continued)
+**Focus:** Evidence cleanup, overshare audit, 2025 report comparison, system info completion
+- Filtered ESEC-171 access population to 140 in-scope-system tickets (SLO, MMAX, CASHI, SchoolHub, Files.com, Servicing + onboarding)
+- Pre-built full lifecycle data for all 140 access tickets (transitions, approvers, completion records, approval comments)
+- Uploaded org chart screenshots to ESEC-238, closed EL.01
+- Analyzed separation of duties — only 2 true gaps (Tyler Yates Navient transition work), documented explanations for all 7 edge cases
+- Ran full overshare/gap audit across all 36 parent + 94 child tickets:
+  - Cleaned ESEC-195 (replaced orphaned SG file with clean re-pull from production)
+  - Stripped ESEC-150-156 to per-system data only
+  - Removed excess attachments from ESEC-162/166/159/160
+  - Reopened gap tickets: ESEC-146, ESEC-219, ESEC-216
+- Compared 2025 SOC 2 Type II report (Baker Tilly, 91 pages) against current ESEC evidence:
+  - Identified 5 prior-year exceptions that auditors will focus on (LS.07 access reviews, LS.02 access provisioning, LS.04 termination, LS.15 data transmission admin, EL.03 incident response training)
+  - Found evidence mismatches: LS.08 CyberArk/DBA access, CO.02 logging standard policy, IT.07 CISP patch language, CO.06/CO.07 Files.com encryption+jobs
+  - Flagged system description changes: Navient DC migration complete, Splunk→CrowdStrike, Cyxtera DR status
+  - Identified ~9 controls with no obvious ESEC ticket (CO.04 wireless, CO.05 threat intel, LS.13 email scanning, etc.)
+  - Identified misunderstood control intent for LS.12 (needs network diagram, not just SGs), CM.07/CM.08 (deployment pipeline access)
+- Filled blank columns in `Earnest SOC 2 In-Scope System Information.xlsx`:
+  - SLO Platform: Ubuntu/EKS/Aurora PostgreSQL 17.7 + PostgreSQL 16.13
+  - School Hub: Ubuntu/EKS/PostgreSQL 16.13 (production-encrypted)
+  - MMAX: Ubuntu/EKS/Aurora PostgreSQL 17.7 (personal-loans)
+  - CASHI: Ubuntu/EKS/Aurora PostgreSQL 17.7 (new-products)
+  - Servicing Platform: Windows/RDS managed/SQL Server SE 15.00 (fulfillment-rds-prod-use1)
+
+### Status as of September 9, 2026 (end of day)
+- **Parent tickets:** 20 Done / 16 remaining
+- **Child tickets:** 35 Done / 33 remaining
+- **9/11 deadline (configs/policies):** Most config evidence collected; key outstanding items are IT team screenshots (Tyler/Gaige due 9/10) and policy verification for CISP/logging standard
+- **9/30 deadline (samples):** Access provisioning population ready (140 tickets with full lifecycle), change populations ready, incident response / tabletop / BC-DR still pending
+- **Highest risk controls:** LS.07 (access reviews — repeat finding risk), IT.08 (tabletop), CO.03 (IRP document), IT.10 (BC/DR plans)
 
 ---
 
