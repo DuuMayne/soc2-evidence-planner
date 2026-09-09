@@ -264,12 +264,38 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
   - CASHI: Ubuntu/EKS/Aurora PostgreSQL 17.7 (new-products)
   - Servicing Platform: Windows/RDS managed/SQL Server SE 15.00 (fulfillment-rds-prod-use1)
 
-### Status as of September 9, 2026 (end of day)
-- **Parent tickets:** 20 Done / 16 remaining
-- **Child tickets:** 35 Done / 33 remaining
-- **9/11 deadline (configs/policies):** Most config evidence collected; key outstanding items are IT team screenshots (Tyler/Gaige due 9/10) and policy verification for CISP/logging standard
+### September 9, 2026 (Session 3 — continued)
+**Focus:** Gap analysis against auditor request list, per-tool admin evidence, ESEC gap ticket creation
+- Cross-referenced full auditor request list (Earnest SOC 2 2026 Request List.xlsx) against all ESEC ticket status
+- Identified 4 tickets marked Done that don't match what auditor asked for:
+  - ESEC-192 (LS.12): Has VPC CSVs but auditor asked for visual network diagram
+  - ESEC-224 (CO.06): Has AWS ACM/ALB TLS but auditor asked for per-tool configs (Airflow, Looker, Sign Service, Files.com)
+  - ESEC-226 (CO.07): Has EventBridge rules but auditor asked for per-tool scheduled jobs
+  - ESEC-205 (LS.15): Has Okta org admins but auditor asked for per-tool admin listings
+- Pulled Okta data for all 4 tools:
+  - Airflow Production: 61 users, 13 RBAC groups via Okta OIDC. 6 admins in airflow_admin group.
+  - Looker: 200+ users via SAML. Groups: All Employees, Data, Credit Ops, etc. No Okta-level admin group — admin managed within Looker.
+  - Files.com: 62 users via SAML/SCIM. 8 groups including Dev Admin (21 users), Staging Admin (22 users), Prod Read Only.
+  - Sign Service: NOT FOUND in Okta. Only Signadot (CI/CD) and DocuSign variants. Needs clarification.
+- Created evidence files: airflow_admin_users.csv, airflow_all_users.csv, airflow_role_structure.csv, files_com_admin_users.csv, files_com_group_structure.csv, IPE_documentation.txt
+- Created 6 gap ESEC tickets:
+  - ESEC-272: LS.15 per-tool admin listings gap
+  - ESEC-273: CO.06 per-tool secure transmission config gap
+  - ESEC-274: CO.07 per-tool scheduled jobs gap
+  - ESEC-275: LS.12 network diagram gap
+  - ESEC-276: CO.02 CrowdStrike IPE (resolved immediately)
+  - ESEC-277: Sign Service identification
+- Closed tickets: ESEC-219 (CO.02 IPE — uploaded CrowdStrike IPE), ESEC-216 (CO.02 parent), ESEC-276 (resolved)
+- Confirmed Looker is default entitlement for all employees (Okta "All Employees" group)
+- Found AWS Okta Groups Confluence page documenting default access entitlements
+
+### Status as of September 9, 2026 (end of session 3)
+- **Parent tickets:** 22 Done / 14 remaining (+ 6 new gap tickets)
+- **Child tickets:** 37 Done / 31 remaining
+- **9/11 deadline (configs/policies):** Most config evidence collected; key outstanding items are IT team screenshots (Tyler/Gaige due 9/10), per-tool evidence for CO.06/CO.07/LS.15, network diagram, and policy verification for CISP/logging standard
 - **9/30 deadline (samples):** Access provisioning population ready (140 tickets with full lifecycle), change populations ready, incident response / tabletop / BC-DR still pending
 - **Highest risk controls:** LS.07 (access reviews — repeat finding risk), IT.08 (tabletop), CO.03 (IRP document), IT.10 (BC/DR plans)
+- **New gap tickets needing action:** ESEC-272 (Looker admins from tool owner), ESEC-273 (per-tool TLS), ESEC-274 (per-tool scheduled jobs), ESEC-275 (network diagram from infra team), ESEC-277 (identify Sign Service)
 
 ---
 
