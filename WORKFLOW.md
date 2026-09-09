@@ -144,6 +144,10 @@ For evidence that requires other teams:
 │   ├── scheduled_jobs/          # EventBridge rules and targets
 │   ├── secure_transmission/     # ACM certs, ALB TLS, CloudFront
 │   └── vpn_access/              # VPN security groups (Pritunl)
+├── network_security/
+│   ├── earnest_network_diagram.md   # Mermaid diagram (all VPCs, EKS, RDS, LBs, VPN)
+│   ├── earnest_network_diagram.png  # Rendered PNG
+│   └── co06_tls_vendor_documentation.md  # Vendor TLS proof for Airflow, Looker, Files.com
 ├── confluence/
 │   ├── developer_training/      # Training page catalog
 │   └── policy_sweep/            # Policy mapping + PDFs
@@ -297,6 +301,27 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - **Highest risk controls:** LS.07 (access reviews — repeat finding risk), IT.08 (tabletop), CO.03 (IRP document), IT.10 (BC/DR plans)
 - **New gap tickets needing action:** ESEC-272 (Looker admins from tool owner), ESEC-273 (per-tool TLS), ESEC-274 (per-tool scheduled jobs), ESEC-275 (network diagram from infra team), ESEC-277 (identify Sign Service)
 
+### September 9, 2026 (Session 4 — continued)
+**Tickets closed:** ESEC-273, ESEC-275 (2 tickets)
+**Ticket created:** ESEC-278 (control-by-control evidence justification write-up)
+- Researched vendor documentation for Airflow, Looker, and Files.com to prove TLS is enforced by default at the platform level
+- Compiled comprehensive TLS vendor documentation (`co06_tls_vendor_documentation.md`) with specific URLs, direct quotes, and live TLS verification for Looker:
+  - **Airflow**: AWS requires TLS 1.2+ (docs.aws.amazon.com/mwaa/infrastructure-security). No opt-out. ALB + ACM certs. Okta OIDC requires HTTPS for OAuth redirects.
+  - **Looker**: Google enforces TLS 1.3 on earnest.looker.com. HTTP auto-redirects (301) to HTTPS. HSTS with preload enabled. Certificate from Google Trust Services. SOC 2 certified (cloud.google.com/security/compliance/services-in-scope).
+  - **Files.com**: TLS 1.2/1.3 enforced by default. **Cannot be disabled** (files.com/docs/settings-and-usage/security/tls-ssl-security). SFTP uses SSH encryption. Qualys SSL Labs A+ rating. SOC 2 Type II audited annually by Kirkpatrick Price (report issued May 2026).
+  - **Sign Service**: Internal ALB with ACM TLS (already covered in ESEC-224).
+- Uploaded vendor TLS doc to ESEC-273 with summary comment, transitioned to Done
+- Closed ESEC-275 (network diagram gap) — Mermaid diagram was already generated from live AWS data and uploaded in session 3
+- Created ESEC-278 to track a comprehensive control-by-control evidence justification document for auditor submission and internal reference
+
+### Status as of September 9, 2026 (end of session 4)
+- **Parent tickets:** 25 Done / 11 remaining
+- **Gap tickets resolved:** ESEC-272 Done, ESEC-273 Done, ESEC-275 Done, ESEC-276 Done, ESEC-277 Done (5 of 6 gap tickets closed; ESEC-274 still open)
+- **Still open gap ticket:** ESEC-274 (CO.07 per-tool scheduled jobs — needs Bronte Baer/Data team for Airflow DAGs, tool owners for Looker/Files.com)
+- **9/11 deadline:** IT team screenshots (Tyler/Gaige due 9/10), ESEC-163 (security update PowerPoints), ESEC-186 (DBA login recording), ESEC-274 (scheduled jobs)
+- **9/30 deadline:** Sample tickets waiting on auditor selection, LS.07 access reviews (repeat finding risk), CO.09 incidents, IT.08 tabletop, IT.09 pentest, HR items
+- **New ticket:** ESEC-278 (control-by-control evidence justification write-up — to be completed after all evidence collected)
+
 ---
 
 ## For Next Year
@@ -314,3 +339,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 11. Document all system migrations at the time they happen, not during audit season
 12. Build unified evidence packets from the start for multi-pillar controls instead of loose files
 13. Track the Keystone-style remediation programs year-round — they make the best audit stories
+14. **Vendor documentation can replace tool-specific screenshots for SaaS TLS evidence.** When the auditor asks for "screenshots of configurations showing secure data transmission," cloud-hosted SaaS tools (Looker, Files.com) enforce TLS at the platform level with no customer opt-out. Official vendor docs citing "cannot be disabled" + live TLS verification (openssl) is stronger than a screenshot of a setting the customer can't change. Compile vendor URLs, direct quotes, and live verification into a single evidence document.
+15. **Differentiate between customer-configurable and platform-enforced controls.** For SaaS tools, many security controls (TLS, encryption at rest, log immutability) are platform-enforced — the customer has no "disable" button. This is actually a *stronger* audit story than showing a screenshot of a toggle that could be changed. Cite the vendor's security docs + SOC 2 certification as evidence.
+16. **Create a control-by-control justification document early.** A narrative tying each evidence artifact to the control intent and auditor request prevents misunderstanding at review time. Start it as evidence is collected, not at the end.
+17. **Close gap tickets immediately when evidence is available.** Gap tickets created during analysis (ESEC-272–277) should be resolved in the same session if the evidence already exists — e.g., ESEC-275 (network diagram) was closeable immediately because the diagram was generated in the prior session but the gap ticket wasn't closed.
