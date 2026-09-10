@@ -7,7 +7,7 @@ How we ran the 2026 SOC 2 Type II evidence collection at Earnest, what worked, w
 ```
 Auditor Request List (.xlsx)
     ↓ parsed into
-Jira ESEC tickets (94 tickets across ~35 controls)
+Jira ESEC tickets (100 tickets across ~35 controls)
     ↓ evidence collected via
 Source Systems: AWS, GitHub, Okta, CrowdStrike, Confluence, Kandji, Jira, Google Workspace
     ↓ stored in
@@ -168,15 +168,25 @@ For evidence that requires other teams:
 │   ├── crowdstrike_users_with_roles.csv         # 18 users with Okta SSO note
 │   ├── crowdstrike_role_definitions.csv         # 81 available roles (reference)
 │   └── IPE_documentation.txt                    # IPE for all CS API pulls
+├── database_access/
+│   └── ls08_dba_login_process.md                # gogo-db → Okta → Vault → ephemeral creds flow
 ├── files_com/
 │   ├── files_com_okta_users.csv                 # 62 users via Okta SCIM
 │   ├── files_com_new_accounts_audit_period.csv  # 30 new accounts in period
+│   ├── files_com_change_population.csv          # 11 PRs from file-transfer-service
+│   ├── files_com_change_population_ipe.txt      # IPE for change population
 │   └── IPE_documentation.txt                    # IPE for Okta API pull
 ├── github/
 │   ├── *_change_population.csv  # Per-product change populations
 │   ├── pr_review_separation_of_duties.csv
 │   └── entitlements_and_devs/   # Org members, teams, permissions
-├── patching_evidence/           # EKS updates, RDS configs, Jira tickets
+├── incidents/
+│   ├── SEC-INC-031126_storyblok_mapi_token_exposure.md   # PIR: bug bounty, MAPI token in JS bundle
+│   ├── SEC-INC-081726_suspicious_okta_logins.md          # PIR: impossible travel, ACT contractor VPN (false positive)
+│   └── SEC-INC-083126_infra_secrets_exposure.md          # PIR: SOPS-encrypted secrets on public GitHub
+├── patching_evidence/
+│   ├── cm09_req40_security_update_powerpoints_justification.md  # N/A justification
+│   └── ...                      # EKS updates, RDS configs, Jira tickets
 └── vpn_mfa_combined/            # Okta MFA + VPN MFA screenshots
 ```
 
@@ -322,6 +332,28 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - **9/30 deadline:** Sample tickets waiting on auditor selection, LS.07 access reviews (repeat finding risk), CO.09 incidents, IT.08 tabletop, IT.09 pentest, HR items
 - **New ticket:** ESEC-278 (control-by-control evidence justification write-up — to be completed after all evidence collected)
 
+### September 10, 2026 (Session 5)
+**Tickets closed:** ESEC-232, ESEC-233, ESEC-234, ESEC-235, ESEC-236 (CO.09 complete), ESEC-163 (CM.09 PowerPoints N/A), ESEC-161 (CM.09 parent)
+**Tickets created:** DNA-14432 (Dhananjay — Airflow ArgoCD + Looker SLO scheduled reports)
+- Wrote third post-incident review: SEC-INC-081726 (suspicious Okta logins / impossible travel from Guatemala IP — confirmed false positive, ACT contractor VPN routing)
+- Uploaded all 3 PIRs to ESEC-233 (population) and ESEC-236 (samples), with IPE on ESEC-234, N/A on ESEC-235
+- Closed all CO.09 tickets — population is small (N=3) so full population serves as sample
+- Closed ESEC-163 (CM.09 security update PowerPoints) as N/A — the PowerPoint was a Navient parent-company reporting artifact, not evidence of control operation. Jira patching tickets (Req 39, ESEC-162) are the actual evidence. Wrote standalone justification document.
+- Closed ESEC-161 (CM.09 parent) — both sub-tickets done
+- Packaged LS.08 DBA login process documentation: researched meetearnest/gogo-db (Go CLI, Okta → Vault → ephemeral PostgreSQL credentials) and meetearnest/gogodb (deprecated Python predecessor). Pulled Confluence docs: "Database Access - Production DBs" (25 databases with Okta group mappings, updated 9/2/2026) and "How to Request Common Access" (Jira-based access request process). Wrote comprehensive evidence doc covering authentication flow, key security properties, access matrix. Uploaded to ESEC-186 — waiting on Diwakar Puri's video recording to close.
+- Created DNA-14432 on Data & Analytics board for Dhananjay Patil: ArgoCD screenshot for Airflow + SLO-only Looker scheduled reports (ESEC-274 dependency)
+- Updated evidence_request_justification.md for CO.09 (full rewrite with all 3 incidents, auditor narrative) and CM.09 (Req 40 N/A), re-uploaded to ESEC-278
+- HR (Lateesha/Cas) providing EL.04 background checks and EL.06 performance reviews directly. Performance review population may be needed — Baker Tilly will likely want to select their own samples.
+- Diwakar Puri working on LS.08 DBA login recording independently.
+
+### Status as of September 10, 2026 (end of session 5)
+- **Overall progress:** 72/100 ESEC tickets Done (72%), up from ~65% at start of session
+- **Parent controls remaining:** 13 (including epic ESEC-137 and living doc ESEC-278)
+- **9/11 blockers (others):** G-Suite + ITO passwords (Tyler/Gaige), UniFi screenshots (Tyler/Gaige), email security summaries (Tyler Yates), per-tool scheduled jobs (Dhananjay via DNA-14432), DBA video (Diwakar)
+- **9/11 blockers (Adam):** Tabletop exercise (ESEC-257/258), pentest report (ESEC-260)
+- **9/30 items:** 6 sample-selection tickets blocked on Baker Tilly, HR items in progress, termination population needed, asset disposal (Jason/Tyler)
+- **Key wins this session:** CO.09 fully closed with 3 well-documented PIRs, CM.09 PowerPoints eliminated as N/A with justification, DBA login process documented with full toolchain explanation
+
 ---
 
 ## For Next Year
@@ -343,3 +375,9 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 15. **Differentiate between customer-configurable and platform-enforced controls.** For SaaS tools, many security controls (TLS, encryption at rest, log immutability) are platform-enforced — the customer has no "disable" button. This is actually a *stronger* audit story than showing a screenshot of a toggle that could be changed. Cite the vendor's security docs + SOC 2 certification as evidence.
 16. **Create a control-by-control justification document early.** A narrative tying each evidence artifact to the control intent and auditor request prevents misunderstanding at review time. Start it as evidence is collected, not at the end.
 17. **Close gap tickets immediately when evidence is available.** Gap tickets created during analysis (ESEC-272–277) should be resolved in the same session if the evidence already exists — e.g., ESEC-275 (network diagram) was closeable immediately because the diagram was generated in the prior session but the gap ticket wasn't closed.
+18. **Challenge arbitrary evidence requests against the actual control language.** CM.09 asks for monthly patches applied with review and approval. Baker Tilly asked for "Security Update PowerPoints sent to Navient" — that's a parent-company reporting artifact, not evidence the control operated. The Jira patching tickets are the primary evidence. Producing a retroactive PowerPoint would be less credible than the source system records. Write a justification doc and close the ticket as N/A.
+19. **Convert raw Slack incident channels into formal PIRs.** Auditors need structured evidence: Summary, Timeline, Root Cause, Impact (CIA), Containment/Resolution, Remediation Actions (owner + status), Lessons Learned. A consistent PIR template across all incidents makes the program look mature. Include false-positive investigations (like impossible travel) — they show the detection pipeline works.
+20. **Small incident populations don't need sample selection.** With N=3 incidents, provide the full population as the sample. This avoids the auditor sample-selection round trip and shows completeness.
+21. **Document internal tooling as evidence.** For LS.08 (DBA login recording), the `gogo-db` tool's architecture (Okta → Vault → ephemeral credentials) tells a stronger security story than a video alone. Document the authentication flow, credential properties (ephemeral, identity-tied, time-limited, read-only default), and access request process. The video becomes supplementary to the documentation, not the other way around.
+22. **Use Confluence as a source of architectural evidence.** Internal runbooks like "Database Access - Production DBs" and "How to Request Common Access" are maintained by engineering and updated regularly (Jason Kennedy updated the DB access page on 9/2/2026). These are living documents that prove processes exist outside of audit season — stronger than audit-time screenshots.
+23. **Create tickets on the owning team's board, not just ESEC.** Asking Dhananjay for Airflow/Looker evidence works better with a DNA ticket (his team's board) than an ESEC ticket he'll never look at. Cross-reference back to the ESEC ticket for your own tracking.
