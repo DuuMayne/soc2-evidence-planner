@@ -187,6 +187,9 @@ For evidence that requires other teams:
 ├── patching_evidence/
 │   ├── cm09_req40_security_update_powerpoints_justification.md  # N/A justification
 │   └── ...                      # EKS updates, RDS configs, Jira tickets
+├── terminations/
+│   ├── it_offboarding_population.csv     # 40 Jira IT offboarding tickets in audit period
+│   └── it_offboarding_population_ipe.txt # IPE (JQL, exclusions, row count)
 └── vpn_mfa_combined/            # Okta MFA + VPN MFA screenshots
 ```
 
@@ -354,6 +357,24 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - **9/30 items:** 6 sample-selection tickets blocked on Baker Tilly, HR items in progress, termination population needed, asset disposal (Jason/Tyler)
 - **Key wins this session:** CO.09 fully closed with 3 well-documented PIRs, CM.09 PowerPoints eliminated as N/A with justification, DBA login process documented with full toolchain explanation
 
+### September 10, 2026 (Session 6 — continued)
+**Tickets closed:** ESEC-186 (LS.08 DBA login — video uploaded by Diwakar), ESEC-176 (LS.04 termination population)
+- Closed ESEC-186 after user uploaded Diwakar Puri's gogo-db video recording. Documentation was already attached from session 5.
+- Re-uploaded justification doc to ESEC-278 (ESEC-146 status fix from prior session wasn't synced)
+- Pulled IT offboarding population from Jira: 40 individual offboarding tickets (IT project, issue type "Offboarding Request") during audit period. Excluded 4 edge cases: 1 email access grant (IT-20700), 3 bulk contractor tickets (IT-20060, IT-20968, IT-21046). Uploaded CSV + IPE to ESEC-176, closed.
+- Decision: Use Jira IT offboarding tickets as termination population source, not Okta deprovisioned users. Jira captures the offboarding *process* (request, approvals, access removal steps), which is what the auditor tests. Okta is not the universal IDP — it only shows end-state.
+- Remaining population gaps for auditor sample selection: ESEC-241 (independent contractor population, HR/Lateesha) and ESEC-243 (performance review population, HR/Cas Varao)
+
+### Status as of September 10, 2026 (end of session 6)
+- **Overall progress:** 75/100 SOC 2 ESEC tickets Done (75%), plus 148 non-SOC2 ESEC tickets Done
+- **Jira totals:** 223 Done, 2 In Progress, 50 To Do (includes non-SOC2 security tickets)
+- **SOC 2 tickets remaining:** ~25 (13 waiting on auditor sample selection or others, 7 waiting on Tyler/Gaige/Tyler Yates, 2 Adam-owned, 3 HR-owned)
+- **9/11 deadline blockers (others):** G-Suite + ITO passwords (Tyler/Gaige), UniFi screenshots (Tyler/Gaige), email security summaries + notification config (Tyler Yates), per-tool scheduled jobs (Dhananjay via DNA-14432), asset disposal (Jason/Tyler)
+- **9/11 deadline blockers (Adam):** Tabletop exercise (ESEC-257/258), pentest report (ESEC-260)
+- **9/30 items:** 7 sample-selection tickets waiting on Baker Tilly, HR items for contractor pop + performance reviews, asset disposal certificates
+- **Populations complete:** Change tickets (6 systems), code developers, access provisioning (140 tickets), Files.com new accounts (30), admin listings (4 tools), CrowdStrike users, laptop listing, security incidents (3 PIRs), server backups, backup failures, **termination offboarding (40 tickets)**
+- **Populations still needed:** Independent contractors (HR), performance reviews (HR)
+
 ---
 
 ## For Next Year
@@ -381,3 +402,4 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 21. **Document internal tooling as evidence.** For LS.08 (DBA login recording), the `gogo-db` tool's architecture (Okta → Vault → ephemeral credentials) tells a stronger security story than a video alone. Document the authentication flow, credential properties (ephemeral, identity-tied, time-limited, read-only default), and access request process. The video becomes supplementary to the documentation, not the other way around.
 22. **Use Confluence as a source of architectural evidence.** Internal runbooks like "Database Access - Production DBs" and "How to Request Common Access" are maintained by engineering and updated regularly (Jason Kennedy updated the DB access page on 9/2/2026). These are living documents that prove processes exist outside of audit season — stronger than audit-time screenshots.
 23. **Create tickets on the owning team's board, not just ESEC.** Asking Dhananjay for Airflow/Looker evidence works better with a DNA ticket (his team's board) than an ESEC ticket he'll never look at. Cross-reference back to the ESEC ticket for your own tracking.
+24. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
