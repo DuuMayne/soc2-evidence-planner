@@ -87,6 +87,62 @@ Everything else — API integrations, evidence packaging, narrative documents, g
 | Calendar days from start to 75% | ~10 |
 | Other team members' time consumed | < 20 hours total estimated |
 | Third-party GRC tool cost | $0 (no Vanta, Drata, or consultant spend) |
+| Claude Code (AWS Bedrock) cost | ~$TBD (update when final invoice available) |
+
+---
+
+## Tooling Investment: Claude Code via AWS Bedrock
+
+The primary tooling cost for this audit was Claude Code running on AWS Bedrock (Anthropic Claude Opus). This is the AI coding assistant that I used to write API integrations in real-time, parse and transform evidence data, generate narrative documents, manage Jira workflows, and execute the entire evidence pipeline interactively across multi-hour sessions.
+
+**What Claude Code replaced:**
+- Writing one-off Python scripts manually for each API integration
+- Manually formatting CSVs, writing IPE documentation, composing narrative evidence
+- Researching API documentation, debugging authentication flows, troubleshooting pagination
+- Drafting Jira comments in Atlassian Document Format (ADF)
+- Cross-referencing the 2025 audit report against current evidence for gap analysis
+
+**What it didn't replace:**
+- GRC judgment: what to pull, what to exclude, how to frame evidence for auditors, when to challenge an evidence request
+- Stakeholder management: knowing who owns what, how to ask for things, when to push back
+- Audit strategy: curating populations, limiting auditor exposure, building narratives that tell a maturity story
+- Domain expertise: understanding SOC 2 control intent, prior-year exception context, system architecture
+
+**The economics:**
+| Item | Cost |
+|------|------|
+| Claude Code (Bedrock Opus, ~6 sessions) | ~$TBD |
+| Third-party GRC platform (avoided) | $30K-80K/year |
+| SOC 2 readiness consultant (avoided) | $50K-150K |
+| Engineering hours for evidence collection (avoided) | 200-400 hours × $75-150/hr = $15K-60K |
+| **Net savings even with Bedrock cost** | **$95K-290K** |
+
+The Bedrock cost is a rounding error against the alternatives. Even a generous estimate of a few hundred dollars in token costs is orders of magnitude cheaper than any of the traditional approaches — and produced better evidence, faster, with fewer people involved.
+
+---
+
+## Year-Over-Year Comparison: 2025 vs. 2026
+
+### 2025 Audit (Baseline)
+- Evidence collection spread across multiple team members over 4-6 weeks
+- Heavy reliance on manual screenshots and spreadsheet-based tracking
+- 3 sub-exceptions on LS.07 (access reviews), plus exceptions on LS.02, LS.04, LS.15, EL.03
+- Evidence frequently didn't match control intent — auditor had to ask follow-up questions
+- System migrations (Splunk → CrowdStrike) not documented at the time, creating confusion during audit
+- No unified evidence packets — loose files with minimal context
+
+### 2026 Audit (This Year)
+- Evidence collection driven by one person in ~10 calendar days to 75% completion
+- API-driven pulls from 7 source systems with inline IPE
+- Proactive gap analysis against 2025 report — all 5 prior-year exceptions have specific remediation evidence prepared
+- Narrative documents tie evidence to control intent (vulnerability management packet, PIRs, DBA login process, justification document)
+- System migration (Splunk → CrowdStrike) documented in evidence with migration notes on every affected control
+- 6 evidence gaps identified and 5 closed before auditor fieldwork begins
+- Populations pre-built and structured for immediate auditor sample selection
+- Control intent mismatches caught and fixed (CO.01, IT.01, CM.09, LS.01)
+
+### What Changed
+The single biggest difference is **approach**: instead of treating SOC 2 as a document-collection exercise where you ask people for things and upload what you get, I treated it as a data engineering problem where you pull structured data from source systems and package it with context. Claude Code on Bedrock made this possible at solo-operator speed — I could write, test, and execute API integrations in real-time during evidence collection sessions rather than spending days writing scripts beforehand.
 
 ---
 
@@ -96,7 +152,8 @@ Everything else — API integrations, evidence packaging, narrative documents, g
 - A third-party GRC platform (Vanta, Drata) runs $30K-80K/year for a company Earnest's size
 - A SOC 2 readiness consultant engagement runs $50K-150K
 - Additional engineering time for evidence collection at other companies: 200-400 hours across multiple engineers
-- **Conservative estimate: $80K-200K in avoided cost this audit cycle**
+- Claude Code Bedrock cost: ~$TBD (a fraction of any alternative)
+- **Conservative estimate: $95K-290K in net avoided cost this audit cycle**
 
 ### Risk Reduction
 - Proactive gap analysis means fewer surprises during audit fieldwork
@@ -159,11 +216,13 @@ Year 3 (2028): Package it. If this works at Earnest, it works anywhere. The `soc
 
 - "I ran the SOC 2 evidence collection essentially solo — a process that typically requires 2-3 FTEs across GRC, IT, and Engineering."
 - "I replaced manual screenshot collection with API-driven evidence pulls from 7 source systems, producing auditor-ready evidence with inline IPE on first pull."
+- "I used Claude Code on AWS Bedrock as a force multiplier — writing API integrations, transforming data, and generating narrative documents in real-time. The Bedrock cost is a rounding error against the $95K-290K in GRC platform, consultant, and engineering time we avoided."
+- "Compared to 2025: fewer people involved, faster completion, better evidence quality, proactive gap closure instead of reactive audit findings. Last year had 5 exceptions. This year I've pre-addressed every one of them with specific remediation evidence."
 - "I identified and closed 6 evidence gaps before the auditor found them, including 4 tickets where our evidence didn't match the control intent."
 - "I proactively found 8 orphaned security groups with public ingress in production and flagged them for remediation."
 - "I wrote 3 formal post-incident reviews from raw Slack data, a unified vulnerability management packet, and a 700-line control-by-control justification document."
-- "I saved the company an estimated $80K-200K by not requiring a GRC platform, consultant, or significant engineering time."
-- "I have a concrete plan to turn this into an automated, continuous evidence collection platform for next year."
+- "I have a concrete plan to turn this into an automated, continuous evidence collection platform for next year — the tooling I built this year is the prototype."
+- "This is what GRC engineering looks like. Not spreadsheets and screenshots — API-driven evidence collection with AI-assisted execution. I want to build this into a repeatable capability for Earnest."
 
 ---
 
