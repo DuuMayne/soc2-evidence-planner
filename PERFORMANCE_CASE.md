@@ -9,25 +9,27 @@ This is a living document. Update it as the audit closes out and as post-audit i
 
 ## Executive Summary
 
-I independently designed and executed Earnest's SOC 2 Type II 2026 evidence collection — a process that at most organizations requires a dedicated team of 3-5 people across GRC, IT, and Engineering. I replaced what was historically a manual, screenshot-heavy, stakeholder-chasing process with an API-driven, programmatic evidence collection pipeline that completed 75% of 100 evidence tickets in under two weeks, with minimal support from other teams.
+I designed and drove Earnest's SOC 2 Type II 2026 evidence collection — replacing what was historically a manual, screenshot-heavy process with an API-driven, programmatic evidence collection approach. As of September 10, 2026 (with 3 weeks remaining in the audit period), 75 of 100 evidence tickets are complete, most of which I completed directly using Claude Code on AWS Bedrock as my primary tooling. The remaining 25 tickets are either waiting on auditor sample selection, pending from other teams (IT screenshots, HR documents), or items I still own (tabletop exercise, pentest report).
 
-This is not how GRC is normally done. The standard playbook is: send spreadsheets to engineering, wait weeks for screenshots, chase people on Slack, manually upload files, hope nothing is stale by the time the auditor looks at it. I wrote the playbook differently.
+The prior year's audit relied on manual screenshots, meetings, and last-minute justifications. This year I shifted to pulling evidence programmatically from source system APIs, packaging it with control-intent narratives, and building the audit story proactively rather than reactively.
 
 ---
 
 ## What I Did
 
 ### Built an API-Driven Evidence Collection Pipeline
-Instead of asking engineers to take screenshots, I pulled evidence directly from source systems via their APIs:
+Where systems have APIs, I pulled evidence programmatically rather than asking engineers to take screenshots:
 
-- **AWS** (7 services): VPCs, security groups, NACLs, ACM certificates, ALB TLS configs, RDS backups, EventBridge rules — all from the production account (075440130607), programmatically verified
-- **GitHub** (3 endpoints): PR populations across 6 in-scope systems (388+ PRs), branch protection evidence, code developer listings, repository permissions
-- **Okta** (5 endpoints): Password policies, MFA configs, authenticators, sign-on policies, SCIM provisioning data for Files.com (discovered Okta manages Files.com — nobody knew)
-- **CrowdStrike Falcon** (6 endpoints): Vulnerability scanning data (58K open, 256K closed across 3,874 hosts), sensor/prevention policies, user management, role definitions
-- **Confluence** (CQL search): Policy sweep across 6 spaces with 42 search terms, mapped to control requirements
-- **Jira Cloud** (REST API v3): Ticket management, evidence upload, bulk transitions, population pulls, lifecycle data extraction for 140 access provisioning tickets
+- **AWS CLI** (7 services): VPCs, security groups, NACLs, ACM certificates, ALB TLS configs, RDS backups, EventBridge rules — all from the production account (075440130607)
+- **GitHub CLI + API**: PR populations across 6 in-scope systems (388+ PRs), code developer listings, repository permissions
+- **Okta API**: Password policies, MFA configs, authenticators, sign-on policies, SCIM provisioning data. Discovered that Files.com is fully managed via Okta SCIM — this wasn't documented anywhere and resolved two open tickets.
+- **CrowdStrike Falcon API**: Vulnerability scanning data (58K open, 256K closed across 3,874 hosts), sensor/prevention policies, user management. Some endpoints (Detections, Incidents) returned 404 due to API scope limitations — worked around with narrative documents cross-referencing actual incidents.
+- **Confluence REST API**: Policy sweep across 6 spaces with 42 search terms, mapped to control requirements
+- **Jira Cloud REST API v3**: Ticket management, evidence upload, bulk transitions, population pulls, lifecycle data extraction for 140 access provisioning tickets
 
-Every API pull includes inline IPE (Information Produced by Entity) — query parameters, row counts, timestamps, pagination confirmation. This is auditor-ready evidence on first pull, not evidence that needs to be re-explained later.
+Not every system has an API — Kandji (device management), Google Workspace admin, and UniFi (wireless) require manual screenshots from IT staff. About 10 tickets are delegated specifically because they need admin console access I don't have.
+
+Every API pull includes inline IPE (Information Produced by Entity) — query parameters, row counts, timestamps, pagination confirmation.
 
 ### Produced Evidence That Tells Stories, Not Just Checks Boxes
 The difference between "here's a CSV" and "here's why this satisfies the control" is the difference between a clean audit and a findings-heavy one.
@@ -41,12 +43,11 @@ The difference between "here's a CSV" and "here's why this satisfies the control
 ### Identified and Closed Gaps Before the Auditor Found Them
 Ran a systematic gap analysis comparing the 2025 SOC 2 report (91 pages, Baker Tilly) against current evidence:
 
-- Found 5 prior-year exceptions that auditors will focus on — prepared specific evidence and talking points for each
-- Identified 4 "Done" tickets where evidence didn't match what the auditor actually asked for (VPC CSVs instead of a network diagram, org-level admins instead of per-tool admin listings, AWS-level TLS instead of per-tool configs)
-- Created 6 gap tickets (ESEC-272–277) and closed 5 of them in the same session
+- Identified the 5 prior-year exceptions that auditors will focus on (LS.07 access reviews with 3 sub-exceptions, LS.02 access provisioning, LS.04 termination, LS.15 admin access, EL.03 incident response training). Prepared specific remediation evidence for 3 of 5: LS.02 has 140 provisioning tickets with full lifecycle data, LS.04 has a 40-ticket offboarding population from Jira, LS.15 has per-tool admin listings for all 4 tools. LS.07 is partially addressed (Q4 2025 review complete, Q3 2026 in progress under Jeff White but not yet finished). EL.03 does not appear to have a dedicated ESEC ticket and may need follow-up.
+- Identified 4 "Done" tickets where evidence didn't match what the auditor actually asked for (VPC CSVs instead of a network diagram, org-level admins instead of per-tool admin listings, AWS-level TLS instead of per-tool configs, EventBridge instead of per-tool scheduled jobs). Created 6 gap tickets (ESEC-272–277) and closed 5 of them in the same session. ESEC-274 (per-tool scheduled jobs) is still open, waiting on Dhananjay.
 - Discovered 8 orphaned production security groups with public ingress — flagged to infra team for remediation before audit review
-- Found and documented the Splunk → CrowdStrike SIEM migration (January 2026) that changes how 4+ controls should be evidenced
-- Identified control intent mismatches: New Relic is APM not security monitoring (CO.01), CloudWatch/SNS is infrastructure monitoring not user-facing downtime notifications (IT.01)
+- Documented the Splunk → CrowdStrike SIEM migration (January 2026) on every affected control, since the auditor's request list still references "Splunk"
+- Identified control intent mismatches where our evidence didn't match what the control was actually asking for: New Relic is APM not security monitoring (CO.01 — supplemented with CrowdStrike NGSIEM narrative), CloudWatch/SNS is infrastructure monitoring not user-facing downtime notifications (IT.01 — flagged as a gap that may need follow-up)
 
 ### Challenged Unnecessary Evidence Requests
 - Closed CM.09 Req 40 (Security Update PowerPoints) as N/A with a formal justification document explaining it was a Navient parent-company reporting artifact, not evidence of control operation
@@ -61,13 +62,16 @@ The standard SOC 2 evidence collection at a company Earnest's size involves:
 - Engineering support for API access, system documentation, and technical evidence (0.5 FTE)
 - Often a third-party consultant or GRC platform (Vanta, Drata, etc.) to automate collection
 
-I did the GRC analyst work, the IT operations work, and the engineering work. The only items I delegated were:
-- Screenshots that require physical access to admin consoles (Tyler/Gaige — ~10 tickets)
-- A video recording of a DBA login (Diwakar Puri — 1 ticket)
-- HR-owned documents (background checks, performance reviews — 4 tickets)
-- A Jira ticket on another team's board (Dhananjay — 1 ticket)
+I handled the GRC analysis, the technical evidence collection, and the engineering work to pull it via API. Items I delegated were things I couldn't do myself:
+- Screenshots from admin consoles I don't have access to (Tyler/Gaige — G-Suite, ITO, UniFi — ~5 tickets, plus a consolidated request ticket)
+- Email security summaries and notification configs from the email admin (Tyler Yates — 2 tickets)
+- Asset disposal records and confirmation (Jason/Tyler — 3 tickets)
+- A video recording of a DBA login process (Diwakar Puri — 1 ticket; I wrote the documentation, he recorded the demo)
+- HR-owned documents: background checks, contractor population, performance reviews (HR team — 6 tickets)
+- Airflow/Looker scheduled job evidence (Dhananjay — 1 ticket via DNA-14432)
+- Q3 2026 access review execution (Jeff White — feeds into existing tickets but I'm not running the review itself)
 
-Everything else — API integrations, evidence packaging, narrative documents, gap analysis, Jira workflow management, auditor communication prep — was me.
+That's roughly 18 tickets delegated out of 100. The rest — API integrations, evidence packaging, narrative documents, gap analysis, Jira workflow management, population curation — I did directly.
 
 ---
 
@@ -77,10 +81,10 @@ Everything else — API integrations, evidence packaging, narrative documents, g
 |--------|-------|
 | Total ESEC tickets | 100 |
 | Tickets completed (as of 9/10) | 75 (75%) |
-| Tickets completed by me directly | ~65 |
-| Source systems integrated via API | 7 (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira, Kandji) |
+| Tickets completed by me directly | ~57 (remaining 18 delegated to IT, HR, engineering) |
+| Source systems integrated via API | 6 (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira) |
 | API endpoints used | 25+ |
-| Evidence files produced | 100+ |
+| Evidence files produced | 244 (across all evidence subdirectories) |
 | Post-incident reviews written | 3 |
 | Gap tickets created and resolved | 6 (5 closed same-day) |
 | Proactive security findings (orphaned SGs) | 8 |
@@ -111,13 +115,11 @@ The primary tooling cost for this audit was Claude Code running on AWS Bedrock (
 **The economics:**
 | Item | Cost |
 |------|------|
-| Claude Code (Bedrock Opus, ~6 sessions) | ~$TBD |
-| Third-party GRC platform (avoided) | $30K-80K/year |
-| SOC 2 readiness consultant (avoided) | $50K-150K |
-| Engineering hours for evidence collection (avoided) | 200-400 hours × $75-150/hr = $15K-60K |
-| **Net savings even with Bedrock cost** | **$95K-290K** |
+| Claude Code (Bedrock Opus, ~6 sessions so far) | ~$TBD (update with actual Bedrock invoice) |
+| Third-party GRC platform (not purchased) | $30K-80K/year (typical Vanta/Drata pricing at Earnest's scale) |
+| SOC 2 readiness consultant (not engaged) | $50K-150K (typical for first-time or remediating orgs) |
 
-The Bedrock cost is a rounding error against the alternatives. Even a generous estimate of a few hundred dollars in token costs is orders of magnitude cheaper than any of the traditional approaches — and produced better evidence, faster, with fewer people involved.
+We didn't purchase a GRC platform or engage a readiness consultant. We also didn't require significant engineering time for evidence collection — the delegated items are mostly admin console screenshots and HR documents, not engineering effort. The Bedrock cost is the primary tooling investment, and it will be a fraction of any of those alternatives.
 
 ---
 
@@ -138,9 +140,9 @@ The 2025 audit was run the way most companies run SOC 2: manually.
 ### 2026 Audit (This Year)
 Fundamentally different approach: programmatic evidence collection with proactive audit strategy.
 
-- API-driven pulls from 7 source systems (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira, Kandji) with inline IPE — no screenshots unless a system literally has no API
+- API-driven pulls from 6 source systems (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira) with inline IPE. Some systems still require manual screenshots — either because they don't have a usable API (Kandji, Google Workspace admin, UniFi), because API access hasn't been granted yet, or because the API scope is limited (CrowdStrike Detections/Incidents endpoints return 404 with current credentials)
 - One person, ~10 calendar days to 75% completion — less total effort than the multi-person 2025 approach took
-- Proactive gap analysis against the 2025 report — all 5 prior-year exceptions have specific remediation evidence prepared before the auditor asks
+- Proactive gap analysis against the 2025 report — identified all 5 prior-year exceptions, prepared specific remediation evidence for 3 of 5 (LS.02, LS.04, LS.15), LS.07 partially addressed (Q4 complete, Q3 in progress), EL.03 flagged as needing follow-up
 - Narrative documents tell the story before the auditor has to ask: unified vulnerability management packet, 3 formal PIRs, DBA login process documentation, 700+ line control-by-control justification document
 - System migration (Splunk → CrowdStrike) documented on every affected control with migration notes and replacement evidence
 - 6 evidence gaps self-identified and 5 closed before auditor fieldwork
@@ -159,16 +161,15 @@ Claude Code on AWS Bedrock is what made this transformation possible at solo-ope
 ## What This Means for the Business
 
 ### Cost Avoidance
-- A third-party GRC platform (Vanta, Drata) runs $30K-80K/year for a company Earnest's size
-- A SOC 2 readiness consultant engagement runs $50K-150K
-- Additional engineering time for evidence collection at other companies: 200-400 hours across multiple engineers
-- Claude Code Bedrock cost: ~$TBD (a fraction of any alternative)
-- **Conservative estimate: $95K-290K in net avoided cost this audit cycle**
+- No third-party GRC platform purchased (Vanta, Drata typically $30K-80K/year at Earnest's scale)
+- No SOC 2 readiness consultant engaged (typically $50K-150K)
+- Minimal engineering time consumed — delegated items are admin screenshots and HR documents, not engineering effort
+- Claude Code Bedrock cost: ~$TBD (update with actual invoice — expected to be a small fraction of the alternatives)
 
 ### Risk Reduction
 - Proactive gap analysis means fewer surprises during audit fieldwork
-- Prior-year exceptions have specific, documented remediation evidence ready
-- Control intent mismatches identified and fixed before auditor review — prevents findings that stem from providing the wrong type of evidence
+- 3 of 5 prior-year exceptions have specific remediation evidence ready; LS.07 (highest risk, 3 sub-exceptions) is partially addressed with Q4 2025 review complete and Q3 2026 in progress
+- Control intent mismatches identified and corrected before auditor review (CO.01, CM.09, LS.01) — prevents findings that stem from providing the wrong type of evidence. IT.01 flagged as a gap that still needs resolution.
 - Narrative documents give the auditor context, reducing the back-and-forth that extends audit timelines
 
 ### Efficiency Gain
@@ -225,9 +226,9 @@ Year 3 (2028): Package it. If this works at Earnest, it works anywhere. The `soc
 ## Talking Points for Review Conversation
 
 - "I ran the SOC 2 evidence collection essentially solo — a process that typically requires 2-3 FTEs across GRC, IT, and Engineering."
-- "I replaced manual screenshot collection with API-driven evidence pulls from 7 source systems, producing auditor-ready evidence with inline IPE on first pull."
-- "I used Claude Code on AWS Bedrock as a force multiplier — writing API integrations, transforming data, and generating narrative documents in real-time. The Bedrock cost is a rounding error against the $95K-290K in GRC platform, consultant, and engineering time we avoided."
-- "Compared to 2025: fewer people involved, faster completion, better evidence quality, proactive gap closure instead of reactive audit findings. Last year had 5 exceptions. This year I've pre-addressed every one of them with specific remediation evidence."
+- "I replaced manual screenshot collection with API-driven evidence pulls from 6 source systems, producing auditor-ready evidence with inline IPE on first pull. Some systems still require manual screenshots because I don't have API access or the system doesn't expose one."
+- "I used Claude Code on AWS Bedrock as a force multiplier — writing API integrations, transforming data, and generating narrative documents in real-time. The Bedrock cost is modest compared to the GRC platform, consultant, and engineering time we avoided."
+- "Compared to 2025: fewer people involved, faster completion, better evidence quality, proactive gap closure instead of reactive audit findings. Last year had 5 exceptions. This year I've identified all of them and pre-addressed the ones I can — 3 of 5 have specific remediation evidence ready, LS.07 is in progress, and I've flagged the remaining gap."
 - "I identified and closed 6 evidence gaps before the auditor found them, including 4 tickets where our evidence didn't match the control intent."
 - "I proactively found 8 orphaned security groups with public ingress in production and flagged them for remediation."
 - "I wrote 3 formal post-incident reviews from raw Slack data, a unified vulnerability management packet, and a 700-line control-by-control justification document."
