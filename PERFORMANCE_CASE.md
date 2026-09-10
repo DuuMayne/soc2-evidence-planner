@@ -124,25 +124,35 @@ The Bedrock cost is a rounding error against the alternatives. Even a generous e
 ## Year-Over-Year Comparison: 2025 vs. 2026
 
 ### 2025 Audit (Baseline)
-- Evidence collection spread across multiple team members over 4-6 weeks
-- Heavy reliance on manual screenshots and spreadsheet-based tracking
-- 3 sub-exceptions on LS.07 (access reviews), plus exceptions on LS.02, LS.04, LS.15, EL.03
-- Evidence frequently didn't match control intent — auditor had to ask follow-up questions
-- System migrations (Splunk → CrowdStrike) not documented at the time, creating confusion during audit
-- No unified evidence packets — loose files with minimal context
+The 2025 audit was run the way most companies run SOC 2: manually.
+
+- Almost no API engagement or scripted evidence collection — evidence was gathered through manual screenshots, reports pulled by hand from admin consoles, and documents assembled from memory
+- Evidence collection spread across multiple team members over weeks, driven by meetings and Slack chasing
+- Reactive posture: justifications written last-minute when auditors questioned evidence, not proactively before submission
+- No narrative documents tying evidence to control intent — auditors received files without context and had to ask follow-up questions
+- No gap analysis against the prior-year report — prior-year exceptions were addressed ad hoc, not systematically
+- 5 exceptions in the final report: 3 sub-exceptions on LS.07 (access reviews), plus LS.02 (access provisioning), LS.04 (termination), LS.15 (admin access), EL.03 (incident response training)
+- System migrations (Splunk → CrowdStrike) happened mid-period with no documentation — created confusion when auditors asked for "Splunk" evidence
+- No reusable artifacts — every audit cycle starts from scratch
 
 ### 2026 Audit (This Year)
-- Evidence collection driven by one person in ~10 calendar days to 75% completion
-- API-driven pulls from 7 source systems with inline IPE
-- Proactive gap analysis against 2025 report — all 5 prior-year exceptions have specific remediation evidence prepared
-- Narrative documents tie evidence to control intent (vulnerability management packet, PIRs, DBA login process, justification document)
-- System migration (Splunk → CrowdStrike) documented in evidence with migration notes on every affected control
-- 6 evidence gaps identified and 5 closed before auditor fieldwork begins
-- Populations pre-built and structured for immediate auditor sample selection
-- Control intent mismatches caught and fixed (CO.01, IT.01, CM.09, LS.01)
+Fundamentally different approach: programmatic evidence collection with proactive audit strategy.
+
+- API-driven pulls from 7 source systems (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira, Kandji) with inline IPE — no screenshots unless a system literally has no API
+- One person, ~10 calendar days to 75% completion — less total effort than the multi-person 2025 approach took
+- Proactive gap analysis against the 2025 report — all 5 prior-year exceptions have specific remediation evidence prepared before the auditor asks
+- Narrative documents tell the story before the auditor has to ask: unified vulnerability management packet, 3 formal PIRs, DBA login process documentation, 700+ line control-by-control justification document
+- System migration (Splunk → CrowdStrike) documented on every affected control with migration notes and replacement evidence
+- 6 evidence gaps self-identified and 5 closed before auditor fieldwork
+- Populations pre-built and structured for immediate auditor sample selection — no round trips
+- Control intent mismatches caught and corrected proactively (CO.01, IT.01, CM.09, LS.01)
+- Unnecessary evidence requests challenged with formal justification documents (CM.09 PowerPoints, LS.01 Files.com passwords)
+- Everything is documented and reproducible — WORKFLOW.md is a runbook, not a retrospective
 
 ### What Changed
-The single biggest difference is **approach**: instead of treating SOC 2 as a document-collection exercise where you ask people for things and upload what you get, I treated it as a data engineering problem where you pull structured data from source systems and package it with context. Claude Code on Bedrock made this possible at solo-operator speed — I could write, test, and execute API integrations in real-time during evidence collection sessions rather than spending days writing scripts beforehand.
+The approach changed completely. The 2025 audit was a **document-collection exercise**: schedule meetings, ask people for screenshots, upload what you get, justify retroactively when auditors push back. The 2026 audit is a **data engineering problem**: pull structured data from source systems via API, package it with control-intent narratives, curate what the auditor sees, and build the audit story proactively.
+
+Claude Code on AWS Bedrock is what made this transformation possible at solo-operator speed. Instead of spending days writing Python scripts for each API, debugging authentication, and formatting output, I executed API integrations interactively in real-time — writing, testing, and deploying evidence pulls within the same session. What would have taken a week of scripting per source system took hours. The AI handled the mechanical work (API calls, data transformation, ADF formatting, CSV generation, IPE documentation) while I focused on what actually requires GRC expertise: audit strategy, evidence curation, narrative framing, stakeholder management, and knowing what not to show the auditor.
 
 ---
 
