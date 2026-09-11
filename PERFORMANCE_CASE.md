@@ -125,36 +125,62 @@ We didn't purchase a GRC platform or engage a readiness consultant. We also didn
 
 ## Year-Over-Year Comparison: 2025 vs. 2026
 
-### 2025 Audit (Baseline)
-The 2025 audit was run the way most companies run SOC 2: manually.
+### 2025 Audit — By the Numbers (from actual evidence folder)
 
-- Almost no API engagement or scripted evidence collection — evidence was gathered through manual screenshots, reports pulled by hand from admin consoles, and documents assembled from memory
-- Evidence collection spread across multiple team members over weeks, driven by meetings and Slack chasing
-- Reactive posture: justifications written last-minute when auditors questioned evidence, not proactively before submission
-- No narrative documents tying evidence to control intent — auditors received files without context and had to ask follow-up questions
-- No gap analysis against the prior-year report — prior-year exceptions were addressed ad hoc, not systematically
-- 5 exceptions in the final report: 3 sub-exceptions on LS.07 (access reviews), plus LS.02 (access provisioning), LS.04 (termination), LS.15 (admin access), EL.03 (incident response training)
-- System migrations (Splunk → CrowdStrike) happened mid-period with no documentation — created confusion when auditors asked for "Splunk" evidence
-- No reusable artifacts — every audit cycle starts from scratch
+The 2025 evidence folder tells the story better than any summary could:
 
-### 2026 Audit (This Year)
-Fundamentally different approach: programmatic evidence collection with proactive audit strategy.
+| Metric | 2025 | 2026 |
+|--------|------|------|
+| **Total evidence files** | 761 | 275 |
+| **Screenshots (PNG)** | 401 (53%) | 13 (5%) |
+| **PDFs (Jira exports, docs)** | 259 (34%) | 3 (1%) |
+| **Word docs (manual write-ups)** | 55 (7%) | 0 |
+| **CSVs (structured data)** | 36 (5%) | 160 (58%) |
+| **Markdown (narrative docs)** | 0 | 28 (10%) |
+| **JSON (API config exports)** | 0 | 22 (8%) |
+| **IPE files** | 2 (both screenshots) | 45 text files with inline query params, row counts, timestamps |
+| **Narrative/justification documents** | 0 | 28 (including 700+ line control-by-control justification) |
+| **Per-person sample folders** | 45 (manual folder per auditor-selected individual) | 0 (structured CSVs with population data) |
+| **"Follow-Up" / "Archive" / "Hold" folders** | 10 (evidence of auditor back-and-forth and staging delays) | 0 |
+| **Auditor coordination screenshots** | 13 (screenshots of people's calendar availability for audit meetings) | 0 |
 
-- API-driven pulls from 6 source systems (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira) with inline IPE. Some systems still require manual screenshots — either because they don't have a usable API (Kandji, Google Workspace admin, UniFi), because API access hasn't been granted yet, or because the API scope is limited (CrowdStrike Detections/Incidents endpoints return 404 with current credentials)
-- One person, ~10 calendar days to 75% completion — less total effort than the multi-person 2025 approach took
-- Proactive gap analysis against the 2025 report — identified all 5 prior-year exceptions, prepared specific remediation evidence for 3 of 5 (LS.02, LS.04, LS.15), LS.07 partially addressed (Q4 complete, Q3 in progress), EL.03 flagged as needing follow-up
-- Narrative documents tell the story before the auditor has to ask: unified vulnerability management packet, 3 formal PIRs, DBA login process documentation, 700+ line control-by-control justification document
-- System migration (Splunk → CrowdStrike) documented on every affected control with migration notes and replacement evidence
-- 6 evidence gaps self-identified and 5 closed before auditor fieldwork
-- Populations pre-built and structured for immediate auditor sample selection — no round trips
-- Control intent mismatches caught and corrected proactively (CO.01, IT.01, CM.09, LS.01)
-- Unnecessary evidence requests challenged with formal justification documents (CM.09 PowerPoints, LS.01 Files.com passwords)
-- Everything is documented and reproducible — WORKFLOW.md is a runbook, not a retrospective
+**What the 2025 numbers reveal:**
 
-### What Changed
-The approach changed completely. The 2025 audit was a **document-collection exercise**: schedule meetings, ask people for screenshots, upload what you get, justify retroactively when auditors push back. The 2026 audit is a **data engineering problem**: pull structured data from source systems via API, package it with control-intent narratives, curate what the auditor sees, and build the audit story proactively.
+More than half the evidence was screenshots. The access management controls (LS.02, LS.04, LS.06) were handled by creating individual named folders for each sampled person — "Anthony Sharp", "Alicia Berry", "Chris Vensko" — and manually collecting Jira ticket PDFs, Okta screenshots, and offboarding screenshots into each folder. Chris Vensko alone had 6 files across multiple "Additional Access" PDFs. There were 17 individual microservice screenshots just for the CM.02 change tracking control. The auditor coordination folder contained 13 screenshots of people's calendars — evidence of the meeting-driven approach to collecting evidence.
+
+The "Hold for Now" folders (LS.02, LS.07, CO.07, LS.14) and multiple "Follow-Up #2" directories show evidence that wasn't ready when the auditor asked, required rework, or was being staged because it needed explanation. The Word docs were ad-hoc clarification notes: "Change Request Clarifications.docx", "SoD Explanation.docx", "LS.06 Notes for Audit Team", "Backup Failure Alert Notes.docx" — written reactively when the auditor couldn't understand what they were looking at.
+
+There were exactly 2 IPE files — both screenshots. No structured IPE, no query parameters, no row counts, no timestamps. No markdown narrative documents. No justification docs. No proactive gap analysis.
+
+**Result: 5 exceptions.**
+
+### 2026 Audit — What Changed
+
+| Dimension | 2025 | 2026 |
+|-----------|------|------|
+| **Primary evidence format** | Screenshots (401 PNGs) | Structured data (160 CSVs, 22 JSONs) |
+| **Evidence generation** | Manual: open admin console, take screenshot, save to folder | Programmatic: API call → parse → CSV + inline IPE |
+| **IPE** | 2 screenshot-based IPE files | 45 text files with query parameters, row counts, timestamps, pagination assertions |
+| **Narrative context** | 0 documents — auditor received raw files without explanation | 28 markdown docs including 700+ line justification document, 3 PIRs, unified vuln management packet, DBA process documentation |
+| **Sample evidence** | Per-person named folders (45 folders with manually gathered PDFs + screenshots) | Pre-built population CSVs with full lifecycle data; auditor selects from structured list |
+| **Auditor communication** | Word docs written reactively after auditor questions ("Change Request Clarifications.docx", "SoD Explanation.docx") | Proactive justification document explaining every piece of evidence before auditor asks |
+| **Gap management** | "Hold for Now" staging folders; "Follow-Up #2" rework directories | 6 gaps self-identified, 5 closed same-day, 0 "hold" or "rework" folders |
+| **Audit coordination** | 13 calendar availability screenshots (scheduling meetings to explain evidence) | ADF-formatted Jira comments with structured context; no evidence-explanation meetings needed |
+| **People involved** | Multiple: calendar screenshots show Tyler Yates, Jason Kennedy, Diwakar Puri, Bronte Baer, Seth Robertson, Ricardo Avila, Greg Kohl, Gin Yoshidome, DJ/Dhananjay, John Coburn, Cas, Paula Sloup all scheduled for audit meetings | Primarily one person (Adam Duman); ~18 tickets delegated for admin screenshots and HR docs |
+| **Source systems via API** | 0 | 6 (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira) |
+| **Exceptions** | 5 | TBD — positioned for fewer based on proactive remediation of 3 of 5 prior-year findings |
+
+### What Changed — The Core Shift
+
+The 2025 audit was a **document-collection exercise**: schedule meetings with 13+ stakeholders, ask people for screenshots, create per-person folders, upload what you get, write Word doc clarifications when auditors push back, stage incomplete evidence in "Hold for Now" folders while chasing people for follow-ups. 761 files, 401 screenshots, 55 Word docs. Five exceptions.
+
+The 2026 audit is a **data engineering problem**: pull structured data from source systems via API, package it with control-intent narratives, curate what the auditor sees, pre-build populations for immediate sample selection, and build the audit story proactively. 275 files, 160 CSVs, 28 narrative documents, 45 IPE files. One person, 11 calendar days to 79%.
+
+The file count went *down* by 64% while evidence quality went *up* — because structured data replaces redundant screenshots. One CSV with 388 PRs replaces dozens of individual PR screenshots. One population CSV with 140 access tickets replaces 12 per-person folders with manually gathered PDFs. The evidence is more complete, more verifiable, and comes with inline proof of how it was generated.
 
 Claude Code on AWS Bedrock is what made this transformation possible at solo-operator speed. Instead of spending days writing Python scripts for each API, debugging authentication, and formatting output, I executed API integrations interactively in real-time — writing, testing, and deploying evidence pulls within the same session. What would have taken a week of scripting per source system took hours. The AI handled the mechanical work (API calls, data transformation, ADF formatting, CSV generation, IPE documentation) while I focused on what actually requires GRC expertise: audit strategy, evidence curation, narrative framing, stakeholder management, and knowing what not to show the auditor.
+
+The 2025 audit coordination folder — 13 screenshots of people's calendars — is maybe the most telling artifact. That folder represents the old model: schedule meetings to explain evidence. In 2026, the evidence explains itself.
 
 ---
 
