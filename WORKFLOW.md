@@ -386,14 +386,26 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - Pentest timing confirmed: Cam says SLO pentest can't start for ~2 weeks. Will kick off before 9/30 but won't have final report or remediation within observation window.
 - Updated justification doc: IT.08/IT.09 due dates moved from 9/11 to EOM 9/30, EL.04 section rewritten with population data, open items table updated. Re-uploaded to ESEC-278 multiple times.
 - CTO skip level with Meetesh Karia: Delivered updated status (34/43 = 79%), 5 audit risks including new items on log retention and access provisioning sample risk.
+- **Gaige Rogers bulk delivery (IT-21925):** Processed 4 zip files containing evidence for 9 ESEC tickets:
+  - ESEC-167 (LS.01 G-Suite password): Google password policy screenshot — uploaded and closed
+  - ESEC-196 (LS.13 email security): Oct/Dec summaries empty due to 180-day retention gap; Jun 2026 has data. Safety configs, compliance configs, alert sample — uploaded
+  - ESEC-197 (LS.13 Gmail safety settings): Uploaded and closed
+  - ESEC-199 (LS.13 email notification): Uploaded and closed
+  - ESEC-207 (LS.16 asset disposal parent): Archived assets CSV (562 rows), Use of Services letter, Certificate of Destruction (COD #10905)
+  - ESEC-208 (LS.16 archived assets): Uploaded and closed
+  - ESEC-209 (LS.16 disposal evidence): Uploaded and closed
+  - ESEC-210 (LS.16 data destruction cert): Uploaded and closed
+  - ESEC-221 (CO.04 wireless security): UniFi firewall rules (2) + WPA configs for Oakland + SLC (4 screenshots) — uploaded and closed
+  - Note: ESEC-222 (CO.04 UniFi notification/alert settings) NOT included in delivery — still outstanding
+- **LS.13 email security pushback:** Wrote formal pushback argument in justification doc against Baker Tilly demanding sample-month email security summaries. Platform-enforced vendor control — Google scans all email by default, no customer opt-out. Configuration proves design, Google's SOC 2 covers operation. Historical log retention (~180 days) means Oct/Dec 2025 data doesn't exist and never will. Documented in ESEC-278.
+- **User entitlements (IT-21925):** 7 onboarding, 4 offboarding, 1 transfer screenshots extracted — staged for ESEC-170 (LS.02) and ESEC-200 (LS.14)
 
 ### Status as of September 11, 2026 (end of session 7)
 - **Overall progress:** 34 of 43 parent ESEC tickets Done (79%), up from 29 (67%) at start of day
 - **Tickets remaining:** 9 open
   - **Adam-owned:** ESEC-256 (IT.08 tabletop, needs scheduling before 9/30), ESEC-259 (IT.09 pentest, vendor starting in ~2 weeks)
-  - **Tyler/Gaige:** ESEC-164 (LS.01 G-Suite + ITO passwords), ESEC-220 (CO.04 UniFi screenshots)
-  - **Tyler Yates:** ESEC-196 (LS.13 email security summaries + notification config)
-  - **Jason/Tyler:** ESEC-207 (LS.16 asset disposal)
+  - **Adam — evidence assembly:** ESEC-170 (LS.02 user access provisioning — 140-ticket population ready, need to assemble sample evidence), ESEC-200 (LS.14 data transmission account management — need to compile per-tool evidence)
+  - **Tyler/Gaige:** ESEC-164 (LS.01 ITO password settings — G-Suite password done via ESEC-167), ESEC-220 (CO.04 UniFi notification screenshots — ESEC-222 still missing)
   - **Auditor selects:** ESEC-239 (EL.04 background check samples), ESEC-243 (EL.06 performance review samples)
   - **Living doc:** ESEC-278 (justification write-up)
 - **Engineering dependency:** NS-534 (app-level change populations + access mods for SLO/CASHI/MMAX/SchoolHub/Servicing) needs follow-up push early next week
