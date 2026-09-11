@@ -1,7 +1,7 @@
 # SOC 2 2026 — Performance Case
 **For:** Adam Duman, Security Program Manager
 **Review period reference:** January 2027 annual review
-**Last updated:** September 10, 2026
+**Last updated:** September 11, 2026
 
 This is a living document. Update it as the audit closes out and as post-audit improvements take shape.
 
@@ -9,7 +9,7 @@ This is a living document. Update it as the audit closes out and as post-audit i
 
 ## Executive Summary
 
-I designed and drove Earnest's SOC 2 Type II 2026 evidence collection — replacing what was historically a manual, screenshot-heavy process with an API-driven, programmatic evidence collection approach. As of September 10, 2026 (with 3 weeks remaining in the audit period), 75 of 100 evidence tickets are complete, most of which I completed directly using Claude Code on AWS Bedrock as my primary tooling. The remaining 25 tickets are either waiting on auditor sample selection, pending from other teams (IT screenshots, HR documents), or items I still own (tabletop exercise, pentest report).
+I designed and drove Earnest's SOC 2 Type II 2026 evidence collection — replacing what was historically a manual, screenshot-heavy process with an API-driven, programmatic evidence collection approach. As of September 11, 2026 (with 19 days remaining in the audit period), 34 of 43 parent evidence tickets are complete (79%), most of which I completed directly using Claude Code on AWS Bedrock as my primary tooling. The remaining 9 tickets are either waiting on auditor sample selection, pending from other teams (IT screenshots, HR de-identified lists), or items I still own (tabletop exercise, pentest report). My boss was out all week — I ran this solo.
 
 The prior year's audit relied on manual screenshots, meetings, and last-minute justifications. This year I shifted to pulling evidence programmatically from source system APIs, packaging it with control-intent narratives, and building the audit story proactively rather than reactively.
 
@@ -80,15 +80,15 @@ That's roughly 18 tickets delegated out of 100. The rest — API integrations, e
 | Metric | Value |
 |--------|-------|
 | Total ESEC tickets | 100 |
-| Tickets completed (as of 9/10) | 75 (75%) |
-| Tickets completed by me directly | ~57 (remaining 18 delegated to IT, HR, engineering) |
+| Tickets completed (as of 9/11) | 34 of 43 parent tickets (79%) |
+| Tickets completed by me directly | ~57 (remaining delegated to IT, HR, engineering) |
 | Source systems integrated via API | 6 (AWS, GitHub, Okta, CrowdStrike, Confluence, Jira) |
 | API endpoints used | 25+ |
 | Evidence files produced | 244 (across all evidence subdirectories) |
 | Post-incident reviews written | 3 |
 | Gap tickets created and resolved | 6 (5 closed same-day) |
 | Proactive security findings (orphaned SGs) | 8 |
-| Calendar days from start to 75% | ~10 |
+| Calendar days from start to 79% | ~11 |
 | Other team members' time consumed | < 20 hours total estimated |
 | Third-party GRC tool cost | $0 (no Vanta, Drata, or consultant spend) |
 | Claude Code (AWS Bedrock) cost | ~$TBD (update when final invoice available) |
@@ -242,4 +242,5 @@ Year 3 (2028): Package it. If this works at Earnest, it works anywhere. The `soc
 | Date | Update |
 |------|--------|
 | 2026-09-10 | Initial draft — 75% complete, 10 days into collection |
+| 2026-09-11 | Updated to 79% (34/43 parent tickets). Closed CM.02, LS.08, EL.04 contractor/IPE, CO.07. Background check population (50), contractor population (47), performance review population (264+193) delivered. Pentest timing confirmed (~2 weeks). Boss out all week — ran solo. Identified systemic log retention gap as audit risk. CTO skip level delivered with full risk assessment. |
 | | *Add entries as audit progresses and closes* |

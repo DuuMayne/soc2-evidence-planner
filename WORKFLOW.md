@@ -375,6 +375,44 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - **Populations complete:** Change tickets (6 systems), code developers, access provisioning (140 tickets), Files.com new accounts (30), admin listings (4 tools), CrowdStrike users, laptop listing, security incidents (3 PIRs), server backups, backup failures, **termination offboarding (40 tickets)**
 - **Populations still needed:** Independent contractors (HR), performance reviews (HR)
 
+### September 11, 2026 (Session 7)
+**Tickets closed:** ESEC-141 (CM.02 parent), ESEC-185 (LS.08 parent), ESEC-241 (contractor population), ESEC-242 (contractor IPE), ESEC-274 (CO.07 per-tool scheduled jobs)
+- Exported 15 access review Jira tickets (IT project) as full markdown documents — descriptions, comments, status transitions. Caught 2 false positives (IT-19820 access provisioning, IT-20897 Navient GitHub access) and excluded them. Combined doc + individual exports uploaded to ESEC-181 and ESEC-183. Created PDF export checklist for if/when Baker Tilly demands native Jira PDF exports.
+- Background check population: Parsed Navient SD15-DataDump report — 575 raw rows across 50 unique Applicant IDs (Bill Code: 42212 - Earnest), orders 10/1/2025 – 8/27/2026. De-identified. Uploaded population CSV, raw source file, and IPE to ESEC-239.
+- Contractor population: Parsed Workday report — 47 Earnest LLC contingent workers (21 active, 26 termed). De-identified. Uploaded to ESEC-241, closed.
+- Performance review population: Cas Varao confirmed counts — 264 EOY 2025 (full company annual), 193 Mid-Year 2026 (excludes Ops/ICP employees who get quarterly check-ins instead). Wrote population summary, uploaded to ESEC-243. Requested de-identified lists from HR for auditor sample selection.
+- Closed ESEC-274 (CO.07 per-tool scheduled jobs): Dhananjay provided 3 screenshots — Airflow ArgoCD deployment (Healthy/Synced), Airflow DAG scheduled run (Success, 8 tasks), Looker scheduled jobs admin. Uploaded with ADF comment covering all 4 tools (Airflow: scheduled, Looker: scheduled but some failures, Files.com: event-driven, Sign Service: event-driven per ESEC-277).
+- Looker schedule failure discovery: Dhananjay confirmed scheduled reports to Navient have been failing and nobody on Navient's end complained. Not a SOC 2 control failure — CO.07 is about schedules existing, not SLA monitoring.
+- Pentest timing confirmed: Cam says SLO pentest can't start for ~2 weeks. Will kick off before 9/30 but won't have final report or remediation within observation window.
+- Updated justification doc: IT.08/IT.09 due dates moved from 9/11 to EOM 9/30, EL.04 section rewritten with population data, open items table updated. Re-uploaded to ESEC-278 multiple times.
+- CTO skip level with Meetesh Karia: Delivered updated status (34/43 = 79%), 5 audit risks including new items on log retention and access provisioning sample risk.
+
+### Status as of September 11, 2026 (end of session 7)
+- **Overall progress:** 34 of 43 parent ESEC tickets Done (79%), up from 29 (67%) at start of day
+- **Tickets remaining:** 9 open
+  - **Adam-owned:** ESEC-256 (IT.08 tabletop, needs scheduling before 9/30), ESEC-259 (IT.09 pentest, vendor starting in ~2 weeks)
+  - **Tyler/Gaige:** ESEC-164 (LS.01 G-Suite + ITO passwords), ESEC-220 (CO.04 UniFi screenshots)
+  - **Tyler Yates:** ESEC-196 (LS.13 email security summaries + notification config)
+  - **Jason/Tyler:** ESEC-207 (LS.16 asset disposal)
+  - **Auditor selects:** ESEC-239 (EL.04 background check samples), ESEC-243 (EL.06 performance review samples)
+  - **Living doc:** ESEC-278 (justification write-up)
+- **Engineering dependency:** NS-534 (app-level change populations + access mods for SLO/CASHI/MMAX/SchoolHub/Servicing) needs follow-up push early next week
+- **Populations delivered:** Change tickets (6 systems), code developers, access provisioning (140), Files.com accounts (30), admin listings (4 tools), CrowdStrike users, laptop listing, incidents (3), server backups, backup failures, terminations (40), background checks (50), contractors (47), performance reviews (264 EOY + 193 MY documented, de-identified lists pending from HR)
+
+### Key Audit Risks Identified (Session 7)
+
+1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
+
+2. **Tabletop exercise (IT.08):** Must happen before 9/30. Adam has format and scenario ready but needs participants and a calendar slot. If it slips past the observation window, it's a finding.
+
+3. **Vulnerability management format (IT.06):** Evidence is submitted and the program is genuinely strong (CrowdStrike Spotlight + Grype CI/CD + Kyverno + Keystone governance). Risk is that our remediation story is built around the Keystone program (structured dependency upgrades across service teams) rather than traditional "scan → ticket → fix → rescan" cycles. Baker Tilly may want individual CVE remediation tickets. Narrative packet explains the three-pillar approach but this requires the auditor to engage with a different model than they're used to.
+
+4. **User access provisioning samples (LS.02):** Population of 140 Jira tickets is solid. Risk is at the sample level — when Baker Tilly picks specific users, every sampled provisioning must show documented approval *before* access was granted. Any sample with approval after the fact or missing documentation is a repeat finding on a control they're already watching from the 2025 exception. Engineering populations from NS-534 (SLO/CASHI/MMAX/SchoolHub/Servicing app-level access modifications) are still outstanding.
+
+5. **Log retention gaps (systemic):** Google Workspace audit logs default to 6 months retention. Anything before ~March 2026 is gone. If Baker Tilly picks October/November/December 2025 as sample months for email security (LS.13), those logs don't exist. This isn't just Gmail — any system with <365 days retention has the same gap for the early observation window. The configuration evidence proves the control was operating, but historical output has aged out. Fix for next year: extended retention (Google Workspace Enterprise) or log export pipeline to longer-retention storage (BigQuery, CrowdStrike ingestion).
+
+6. **Baker Tilly evidence format receptivity:** Evidence is objectively stronger than last year but formatted differently from what Baker Tilly is used to (CSVs, API outputs, narrative documents vs. screenshots). Justification document is designed to bridge the gap but auditor may still push back. Three-layer plan: justification doc → supplement with screenshots if needed → escalation via personal contact to BT head of assurance if they reject stronger evidence for format reasons.
+
 ---
 
 ## For Next Year
@@ -392,6 +430,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 11. Document all system migrations at the time they happen, not during audit season
 12. Build unified evidence packets from the start for multi-pillar controls instead of loose files
 13. Track the Keystone-style remediation programs year-round — they make the best audit stories
+14. **Ensure 365-day log retention on all in-scope systems before the observation window opens.** Google Workspace, Okta, CrowdStrike — check every system's default retention and extend or forward logs where needed. Budget for Google Workspace Enterprise or set up log export pipelines to BigQuery/S3/SIEM. This is an infrastructure ask that needs to happen in Q4 before the next observation period.
 14. **Vendor documentation can replace tool-specific screenshots for SaaS TLS evidence.** When the auditor asks for "screenshots of configurations showing secure data transmission," cloud-hosted SaaS tools (Looker, Files.com) enforce TLS at the platform level with no customer opt-out. Official vendor docs citing "cannot be disabled" + live TLS verification (openssl) is stronger than a screenshot of a setting the customer can't change. Compile vendor URLs, direct quotes, and live verification into a single evidence document.
 15. **Differentiate between customer-configurable and platform-enforced controls.** For SaaS tools, many security controls (TLS, encryption at rest, log immutability) are platform-enforced — the customer has no "disable" button. This is actually a *stronger* audit story than showing a screenshot of a toggle that could be changed. Cite the vendor's security docs + SOC 2 certification as evidence.
 16. **Create a control-by-control justification document early.** A narrative tying each evidence artifact to the control intent and auditor request prevents misunderstanding at review time. Start it as evidence is collected, not at the end.
@@ -402,4 +441,6 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 21. **Document internal tooling as evidence.** For LS.08 (DBA login recording), the `gogo-db` tool's architecture (Okta → Vault → ephemeral credentials) tells a stronger security story than a video alone. Document the authentication flow, credential properties (ephemeral, identity-tied, time-limited, read-only default), and access request process. The video becomes supplementary to the documentation, not the other way around.
 22. **Use Confluence as a source of architectural evidence.** Internal runbooks like "Database Access - Production DBs" and "How to Request Common Access" are maintained by engineering and updated regularly (Jason Kennedy updated the DB access page on 9/2/2026). These are living documents that prove processes exist outside of audit season — stronger than audit-time screenshots.
 23. **Create tickets on the owning team's board, not just ESEC.** Asking Dhananjay for Airflow/Looker evidence works better with a DNA ticket (his team's board) than an ESEC ticket he'll never look at. Cross-reference back to the ESEC ticket for your own tracking.
-24. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+24. **Audit log retention must cover the full observation window.** Google Workspace audit logs default to 6 months. If your observation window is 12 months, the first 6 months have no log data by the time the auditor asks. This affects any system with less than 365-day retention. Either upgrade to extended retention (Google Workspace Enterprise) or set up log forwarding to longer-retention storage (BigQuery, S3, CrowdStrike SIEM ingestion) *before* the observation window opens. You can't retroactively produce logs that don't exist.
+
+25. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
