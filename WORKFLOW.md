@@ -677,6 +677,34 @@ has the same problem from the other side — its oldest record in the account is
 IPE to say which file carries period coverage and which is a point-in-time window, and gave Req 212 a
 population and justification paragraph in the justification doc. See lessons 47 and 48.
 
+**Then filled in the shared request list, which turned out to already hold Navient's questions.**
+`Earnest SOC 2 2026 Request List.xlsx` has an `Earnest Status` column (dropdown: Not Started,
+Researching, Blocked, Requested, Collected, Added to Drive, Sent to Baker Tilly, Follow-up), an
+`Earnest Notes` column that was entirely empty across all 84 requests, and a `Navient Notes` column
+carrying five reviewer questions dated 9/14 — one of which was the backup question, asked in Navient's
+own words: *"Earnest to confirm we can only go back to Dec 2025 as that's where the 2nd screenshot
+ends… is there an explanation for why there are no entries for Jan 2026?"* Adam's pushback was
+relaying a reviewer, and answering it in the spreadsheet is where it actually lands.
+
+Statuses were derived by joining the sheet's request numbers to the staged tree by manifest folder
+rather than judged one at a time: 70 requests have staged files, 14 hold only a `CLOSURE_RATIONALE` or
+`_PENDING` note, and those two groups plus the reason in each note determine the status. Result:
+65 Collected, 9 Blocked (7 awaiting Baker Tilly sample selection, plus Req 209 on its dependency and
+Req 210 on the third-party pentest), 5 Follow-up, 3 Sent to Baker Tilly, 1 Requested (ITO screenshot
+from Earnest IT), 1 Researching (tabletop, must run before 9/30). Rows Baker Tilly or Navient had
+already touched kept their status — those columns are *their* record of what they hold, not ours to
+overwrite — and got a note prefixed `9/14 AD -` to match the `9/14 JW -` convention already there.
+
+**Collected, not Added to Drive**, for the staged 65: the tree is built, hash-verified, and every file
+is on its ESEC ticket, but the Drive share has not gone out. One bulk flip when it does.
+
+Two of the five follow-up answers are commitments rather than answers, and are written that way — the
+New Relic alert-event export (retention limit to be stated explicitly *with* the export, so the short
+window reads as a bound rather than an omission) and the database-side credential expiry for LS.08
+Req 77, where the screenshot Navient questioned is the Okta session policy and does not evidence the
+24-hour statement at the database layer. Saying "we will provide X" beats reasoning from what the
+screenshot might cover.
+
 One tooling gap closed on the way: `reupload_cleaned.py` uploads whatever is in the tree, which is
 wrong for rows where the tree holds a rendered PDF and the ticket deliberately holds the `.md`. It
 would have pushed the PDF and deleted the source. `reupload_sources.py` routes by `source_markdown`

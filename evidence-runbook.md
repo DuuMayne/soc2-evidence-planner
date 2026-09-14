@@ -757,6 +757,45 @@ in a sentence, so the reader is not left to work it out from a collection timest
 Generalizes past backups: log searches bounded by index retention, endpoint telemetry, SaaS audit
 logs with 90-day windows, Google Workspace's 6-month rolling limit. Same question every time.
 
+### Status columns on a shared request list (added 2026-09-14)
+
+`Earnest SOC 2 2026 Request List.xlsx` in Downloads is the shared tracker with Navient and Baker Tilly.
+Sheet `Request List`, header row 13, requests in rows 14–97 (84 of them). Columns: A MRN, B Earnest
+Control ID, C Control Wording, D Request #, E Control Owner, F Evidence Request, G Due Date,
+H Baker Tilly's Listed Status, I **Earnest Status**, J **Earnest Notes**, K **Navient Notes**.
+
+Column I has a data validation dropdown — read it out of the file rather than guessing the vocabulary:
+
+```python
+[dv.formula1 for dv in ws.data_validations.dataValidation]
+# 'Not Started,Researching,Blocked,Requested,Collected,Added to Drive,Sent to Baker Tilly,Follow-up'
+```
+
+Derive the status by joining request numbers to the staged tree, not request by request from memory:
+
+```python
+mo = re.search(r"/Req ([0-9]+[a-z]?) ", m["folder"] + " ")   # manifest folder -> request number
+```
+
+A request with manifest rows is Collected. A request whose folder holds only a `CLOSURE_RATIONALE` or
+`_PENDING` file has no manifest rows (those files aren't on Jira), and the `Waiting on:` line in the
+note gives the status: auditor sample selection or a dependency → Blocked, a named internal owner →
+Requested, our own scheduled work → Researching, a documented N/A → Collected.
+
+Three rules that matter more than the mapping:
+
+- **Never overwrite a status Baker Tilly or Navient set.** Rows reading `Sent to Baker Tilly` or
+  `Follow-up` are their record of what they hold and what they asked. Write the note, keep the status.
+- **Read column K before writing anything.** Reviewer questions land there dated and initialled
+  (`9/14 JW - …`) and are often the real reason a status is stale. Answer in J with a matching
+  `9/14 AD -` prefix so the thread reads in order.
+- **`Collected` ≠ `Added to Drive`.** Staged, hashed and on the ESEC tickets is Collected. Only say
+  Added to Drive once the share has actually gone out.
+
+Where the answer isn't known yet, write the commitment, not an inference from the artifact — "we will
+provide the database-side credential expiry" rather than a paragraph on what the Okta session policy
+probably covers.
+
 ### Keep the population you are bounding straight (added 2026-09-14)
 
 "Restore testing jobs start 2025-12-31, so Oct–Dec 2025 has no restore jobs" was read as a gap in
