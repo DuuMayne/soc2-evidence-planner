@@ -702,6 +702,51 @@ Procedures for the work that happens *after* evidence is submitted. Everything h
   saying what was removed, its byte size, and where the surviving copy is. An attachment that
   vanishes from an audit ticket with no explanation is worse than the duplicate was.
 
+### An IPE must name exactly the files delivered beside it (added 2026-09-14)
+
+A multi-control collector writes one IPE per *run*, not one per request. Copy that file into six
+request folders and each copy documents nine evidence files where the folder holds one or two. To an
+auditor that reads as seven missing files, and the two "Evidence File: None / Row Count: 0 / repos
+scanned: 0" stanzas from endpoints that returned nothing read as a failed collection. Neither is what
+happened, and both cost a question.
+
+Worse, the file actually in the folder can go undocumented: `Req 36` shipped
+`production_change_entitlements.csv` (289 rows) with an IPE that never mentioned it.
+
+Detect it mechanically — parse `Evidence File:` lines out of every IPE and diff against the folder
+listing:
+
+```python
+named = {n for n in re.findall(r"Evidence File:\s*(\S+)", txt) if n != "None" and "." in n}
+missing = named - set(os.listdir(folder))
+```
+
+Four folders failed this across the 2026 submission (`IT.11 Req 212`, `LS.12 Req 93`,
+`CM.08 Req 36`, `CM.08 Req 38`). The fix is per-request IPEs written from the run's data, each one
+naming its own files, their row counts, and where the sibling artifacts from the same run went. Cross-
+reference rather than dump: *"Both files come from the single collection run documented above, which
+is why the queries cover more endpoints than either file uses on its own."*
+
+An IPE for a request whose deliverable *is* the IPE (`Req 38 - IPE - Code Developers List`) names the
+file it documents and says which folder holds it.
+
+### Mine the folders people hand you (added 2026-09-14)
+
+A stakeholder's ad-hoc download folder is not a duplicate of the submission. Of 32 files in one
+handed-over `Evidence Requests/` tree, 8 were already staged and 23 were worth adding, including the
+only evidence in the whole package that backups are **restore-tested** rather than merely configured.
+
+- **Diff by content hash over the entire staged tree, never by filename or request number.** The
+  background-check workbook was already covered under a different filename and a different byte size
+  (same 573 rows / 50 applicants); the AWS Backup screenshots sat in a `212/` folder but belonged
+  under Req 213. Filename matching would have gotten both wrong in opposite directions.
+- **Then assess value per group, not per file.** Same pass produced a vendor documentation page worth
+  moderate period-coverage value and three screenshots carrying a control assertion made nowhere else.
+  Twenty-three missing files are not twenty-three equal decisions.
+- **Read the screenshots before writing the IPE.** The restore-testing IPE's plan ARN, cron
+  expression, 60-day selection window, 57-job count and 2025-12-31 start all came off the captures.
+  Do not carry a count you did not read, and do not claim a row-by-row reconciliation you did not do.
+
 ### When submitted evidence turns out to be wrong
 
 **Fix the evidence; do not ship the edit history.** Superseded text is replaced, not annotated. The
@@ -766,6 +811,30 @@ walkthrough is a necessary part of describing what the reader is holding.
   is a claim about a named system's retention, not about the control. Write "no Google Workspace
   customer can produce X," not "X cannot be produced" — the second version is falsified the moment
   anyone finds a second data source, and it makes every other statement in the document suspect.
+
+### When the population owner won't publish a roster (added 2026-09-14)
+
+HR would not hand over a selectable list of performance reviews — reviews carry compensation-relevant
+assessments and unredacted commentary about named people. The auditor's default request ("give us the
+population, we'll pick samples") does not survive that, and neither does the placeholder answer
+("waiting on auditor sample selection"), which parks the request in *our* open-items column for the
+rest of the audit.
+
+What works: **deliver the population count, deliver the samples the owner released, and make the
+next move a written request.**
+
+- The population goes in as a count with its scope and cycle, from the owner, dated. That is the
+  denominator; it does not require the roster.
+- The samples the owner released ship as *the* samples, described completely — not as a partial
+  instalment pending selection.
+- The mechanism for more is stated affirmatively: submit a written request naming the count and the
+  cycle, routed through Security to the owner, handled per sample. Say *why* — the sensitivity of
+  the artifact, not our convenience.
+- The ticket closes. An open ticket is a standing invitation to ask what happened to it.
+
+The auditor can still insist, and may. The point is that insisting now costs them a written request
+against a delivered population, rather than costing us a `_PENDING` folder in the tree. See lesson 44
+in `WORKFLOW.md`.
 
 ### Delivering documents — format (added 2026-09-14)
 
@@ -1013,3 +1082,6 @@ Every evidence collection must include:
 7. **Accuracy controls** — auth method, TLS, no filtering/modification
 8. **Reproducibility** — any user with equivalent access can re-run and get same results
 9. **Limitations** — document any access restrictions, missing data, or assumptions
+10. **Scope match** — the IPE names exactly the files delivered in its folder, and points to where
+    sibling artifacts from the same collection run were filed. A shared collector dump copied into
+    six folders fails this in six places.

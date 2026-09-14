@@ -613,6 +613,55 @@ readable.** Swept the extracted text of every PDF plus all `.txt`/`.csv` for cor
 the only remaining hits are genuine source data (GitHub PR titles reading "Correcting Mapped
 values", a Confluence page revision count). Ready to upload. See lesson 42.
 
+### September 14, 2026 (Session 8, continued — mined the handed-over folder; closed EL.06)
+
+Adam dropped an `Evidence Requests/` folder into Downloads: *"There should be some evidence in a few
+of the folders thats valuable but I dont remember which."* 32 files. Diffed by SHA-256 against every
+file in the staged tree — not by filename, not by request number, which would have been wrong in both
+directions. 8 already staged; 23 added.
+
+The one that mattered: **AWS Backup restore testing.** The package already evidenced that backups
+exist and how they're configured (25 RDS instances, 230 automated snapshots, three backup plans). It
+said nothing about restores ever being exercised. Three screenshots — the
+`RDS_Restore_Testing_Plan_Prod` summary, its 57-job history, and the `restore.tf` that defines it —
+turn "backups are configured" into "restores are tested monthly and all 57 completed." Wrote
+`restore_testing_ipe.txt` off the captures: plan ARN, `cron(0 5 2 * ? *)`, `LATEST_WITHIN_WINDOW`,
+60-day selection window, three protected resource selections, jobs from 2025-12-31 to 2026-09-02, and
+the selection creation dates that explain why the list starts where it does — that last one is visible
+to the auditor in the same screenshot, so it goes in. What is *not* in it: any claim that 57 was
+reconciled row by row, because I didn't count the rows.
+
+Also added: the SDLC **Process** doc (the policy shipped without it, though `policy_mapping.csv` had
+been naming the page all along), 11 months of Files.com vendor release notes (the CM.02 IPE asserted
+platform changes are vendor-managed without ever showing the vendor's change record), the Splunk
+"Immutability of indexed data" documentation for the Oct 2025 – Jan 2026 stretch when Splunk was the
+SIEM, and the production database access runbook — Req 78 "Database Rules Document" had been answering
+with a mapping CSV pointing at three database *design* pages, while the actual rules document
+("we do not provide application engineers with read/write access to production DB's", the Jira request
+path, and every prod database with its read-only Okta group) sat in the folder.
+
+**EL.06 closed on Adam's positioning.** HR won't publish a selectable roster of performance reviews.
+Rather than leave ESEC-244 open on "waiting on auditor sample selection," the population went in as a
+count (264 employees, EOY 2025, from HR, dated), the five reviews HR released ship as *the* samples
+with reviewing managers named, and the justification states the mechanism for more: a written request
+naming count and cycle, routed through Security, handled per sample, because of what the artifact
+contains. Ticket closed, `_PENDING` folder deleted. See lesson 44.
+
+**Then a second defect class, found by script rather than by reading.** Parsing `Evidence File:` lines
+out of every IPE and diffing against the folder listing turned up four IPEs describing files that
+weren't there — shared collector dumps copied per-request, each naming nine artifacts in a folder
+holding one or two, complete with `Row Count: 0 / repos scanned: 0` stanzas. `CM.08 Req 36`'s 289-row
+entitlement CSV was undocumented entirely. Rewrote all four as per-request IPEs. See lesson 45.
+
+One tooling gap closed on the way: `reupload_cleaned.py` uploads whatever is in the tree, which is
+wrong for rows where the tree holds a rendered PDF and the ticket deliberately holds the `.md`. It
+would have pushed the PDF and deleted the source. `reupload_sources.py` routes by `source_markdown`
+and refreshes `source_sha256`, so the PDF-in-Drive / Markdown-in-Jira split survives a re-sync.
+
+Final tree: **355 files, 336 manifest rows, 95.9 MB, 0 hash mismatches, 0 `.md`, 82 PDFs all
+readable, 15 requests still awaiting third parties or auditor selection** (down from 16). Correction-
+language sweep clean — remaining hits are CVE descriptions and PR titles.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -764,3 +813,37 @@ values", a Confluence page revision count). Ready to upload. See lesson 42.
     screenshot and a CSV must be explained, because omitting it guarantees the question. The test for
     a sentence: does it describe the evidence, or does it describe us?
 43. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+
+44. **When the population owner won't publish a roster, deliver the count plus the samples and make
+    the next move a written request.** HR would not hand over a selectable list of performance
+    reviews, and the honest reasons are good ones: the artifacts carry compensation assessments and
+    unredacted commentary about named people. The instinct is to park the request — "waiting on
+    auditor sample selection" — which leaves it open in *our* column all audit and reads as a hole in
+    the population. Instead: the count goes in as the denominator (264 employees, EOY 2025, from the
+    owner, dated), the samples the owner released ship as *the* samples and are described completely,
+    and the path to more is stated affirmatively — a written request naming the count and cycle,
+    routed through Security, handled per sample, because of what the artifact contains. Then close
+    the ticket. The auditor can still insist; the difference is that insisting now costs them a
+    written request against a delivered population instead of costing us a `_PENDING` folder.
+
+45. **An IPE must name exactly the files sitting beside it.** A collector that writes one IPE per
+    *run* produces a file documenting nine artifacts; copy it into six request folders and each copy
+    describes seven files that folder doesn't hold, plus "Evidence File: None / Row Count: 0 / repos
+    scanned: 0" stanzas from endpoints that returned nothing. An auditor reads that as seven missing
+    files and a failed collection. Meanwhile the file that *is* in the folder can go undocumented —
+    `CM.08 Req 36` shipped a 289-row entitlement CSV under an IPE that never mentioned it. Detect it
+    by diffing `Evidence File:` lines against the folder listing, in code, across the whole tree; four
+    folders failed. Write per-request IPEs from the run's data and cross-reference the siblings:
+    "both files come from the single collection run documented above, which is why the queries cover
+    more endpoints than either file uses on its own."
+
+46. **A stakeholder's ad-hoc download folder is not a duplicate of your submission — diff it by
+    content hash.** Of 32 files handed over in one `Evidence Requests/` tree, 23 were missing from the
+    package, including the only evidence anywhere that backups are restore-*tested* rather than merely
+    configured (57 completed AWS Backup restore jobs on a monthly plan). Filename and request-number
+    matching gets this wrong in both directions at once: a background-check workbook already staged
+    under a different name and byte size looked new, while AWS Backup screenshots filed under `212/`
+    belonged under Req 213. Hash the whole staged tree, then assess value per *group* — 23 missing
+    files are not 23 equal decisions. And read the screenshots before writing their IPE: every fact in
+    the restore-testing IPE (plan ARN, `cron(0 5 2 * ? *)`, 60-day window, 57 jobs, 2025-12-31 start)
+    came off the captures, and the one claim not made was a row-by-row reconciliation nobody performed.
