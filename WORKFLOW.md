@@ -547,6 +547,17 @@ already existed but were filed under Req 137 as config evidence.
   superseding 231712). Framed as an addition, not a correction — the revision block still says five
   defects, because nothing previously submitted under CO.08 was inaccurate.
 
+**Delivery format changed from Markdown to PDF.** Adam's read was that Baker Tilly would hate
+Markdown; the deciding argument is simpler than preference — Drive has no Markdown renderer, so a
+`.md` previews as raw text and every table arrives as pipe soup before the auditor downloads
+anything. All 28 written documents now render to page-numbered PDF with running headers and a PDF
+outline (the justification doc is 28 pages). `INDEX.md` retired for a filterable 3-sheet
+`EVIDENCE_INDEX.xlsx`. `.txt` left alone. Markdown stays the source of truth in the repo and on the
+Jira tickets, with `source_markdown` + `source_sha256` recorded next to each PDF so the conversion is
+checkable both ways — a PDF is a rendering of evidence, not new evidence. Staged tree re-verified
+after the change: 334 files, 313 manifest rows, 88.2 MB, 0 hash mismatches, 0 `.md` remaining.
+Renderer notes and the five layout defects that had to be fixed are in the runbook. See lesson 41.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -677,4 +688,14 @@ already existed but were filed under Req 137 as config evidence.
     and the population in the evidence itself (a blueprint header read 302 against 289 MacBooks — 13
     non-Mac devices), because the auditor will compare those two numbers whether you explain them or
     not.
-41. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+41. **Author in Markdown, deliver in the format the reader's viewer can open.** Markdown is the right
+    thing to write in — diffable, reviewable, one source of truth. It is the wrong thing to hand an
+    auditor. Google Drive has no Markdown renderer, so a `.md` previews as raw text and every table
+    arrives as pipe soup before the auditor has downloaded anything; a Windows workpaper machine
+    opens it in Notepad if it opens it at all. Render to PDF for delivery and keep the `.md` as the
+    source of truth in the repo and on the Jira ticket. Record the source filename and its SHA-256
+    next to each PDF so the conversion is checkable in both directions — the PDF is a rendering of
+    evidence, not a new piece of evidence, and it should be traceable as such. Same logic retired
+    `INDEX.md` in favour of an `.xlsx`: an auditor filters and sorts a workbook, nobody reads a 34 KB
+    Markdown listing.
+42. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.

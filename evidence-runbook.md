@@ -711,6 +711,48 @@ Procedures for the work that happens *after* evidence is submitted. Everything h
   customer can produce X," not "X cannot be produced" — the second version is falsified the moment
   anyone finds a second data source, and it makes every other statement in the document suspect.
 
+### Delivering documents — format (added 2026-09-14)
+
+Write in Markdown, ship PDF. Drive has no Markdown renderer: a `.md` previews as raw text, so every
+table is pipe soup before the auditor downloads anything, and a Windows workpaper machine opens it in
+Notepad. The `.md` stays the source of truth in the repo and on the Jira ticket; only what the
+auditor receives changes.
+
+`analysis_sept14/md_to_pdf.py` does the conversion. What it took to get right:
+
+- **Renderer:** WeasyPrint, not headless Chrome. Chrome's default `--print-to-pdf` footer stamps the
+  local `file:///Users/...` path into every page — path leakage on an auditor deliverable. WeasyPrint
+  needs `brew install pango` and `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`.
+- **Page furniture:** `@page` with a running header (org name, doc title via `string-set`) and footer
+  (audit period, `counter(page)` of `counter(pages)`). Page numbers exist so a workpaper can cite a
+  location that still resolves next year. `thead { display: table-header-group }` repeats header rows
+  across page breaks.
+- **Tables need an explicit `<colgroup>`.** WeasyPrint's automatic layout allocates on *max-content*
+  width, so one cell holding a 74-character filename claims most of the table and squeezes short
+  columns into three-line stacks. `overflow-wrap` alone cannot rebalance it. Compute per-column
+  widths from the content and pair the emitted `<colgroup>` with `table-layout: fixed`. Use
+  `overflow-wrap: anywhere` on `td` but `normal` on `th`, or "Devices" renders as "Devic es".
+- **Python-Markdown is not GitHub-flavoured.** It needs a blank line before a list or table, or the
+  items get swallowed into the preceding paragraph and bullets come out as running prose. Normalise
+  on the way in (fence-aware) rather than rewriting the source docs.
+- **`Label: value` metadata runs need hard breaks**, or "Prepared by: Adam Duman" and "Last updated:
+  …" merge into one line. Gate the rule on the *next* line also being a label, so a prose paragraph
+  that merely opens with a bold label is left alone.
+- **macOS is case-insensitive.** `keystone_swarm_channel_export.md` collided with the native Slack
+  export `Keystone_Swarm_Channel_Export.pdf`. Both are real evidence — the PDF is the raw export, the
+  `.md` a curated transcript with its own IPE — so rename rather than clobber. The renderer refuses
+  to overwrite an existing PDF.
+
+Traceability: the manifest and `EVIDENCE_INDEX.xlsx` carry `source_markdown` + `source_sha256` next
+to each PDF's own hash. A PDF is a *rendering* of evidence, not new evidence, and the chain
+Drive PDF → source `.md` → Jira attachment has to stay checkable in both directions. Note PDFs are
+not byte-reproducible across runs (embedded creation timestamp), so the manifest hash is of the copy
+that actually ships.
+
+`.txt` is left alone — IPE notes, `_PENDING`, `CLOSURE_RATIONALE` are short and have no tables.
+`INDEX.md` was retired for `EVIDENCE_INDEX.xlsx` (3 sheets: files / per-control totals / requests
+without files). The README offers any document in Word format on request.
+
 ---
 
 ## Email Security — LS.13 (ESEC-196/197/198/199)
