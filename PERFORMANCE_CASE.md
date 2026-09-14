@@ -1,7 +1,7 @@
 # SOC 2 2026 — Performance Case
 **For:** Adam Duman, Security Program Manager
 **Review period reference:** January 2027 annual review
-**Last updated:** September 11, 2026
+**Last updated:** September 14, 2026
 
 This is a living document. Update it as the audit closes out and as post-audit improvements take shape.
 
@@ -13,6 +13,8 @@ I designed and drove Earnest's SOC 2 Type II 2026 evidence collection — replac
 
 The prior year's audit relied on manual screenshots, meetings, and last-minute justifications. This year I shifted to pulling evidence programmatically from source system APIs, packaging it with control-intent narratives, and building the audit story proactively rather than reactively.
 
+On September 14, with the submission largely assembled, I spent a full session auditing my own work rather than adding to it — and found four defects in evidence already with Baker Tilly, including one that had left a selected sample quarter on the highest-risk control with no evidence identified at all. All four were fixed and disclosed to the auditor in a dated revision block. That pass is the part of this year's work I'd point to first: the pipeline is the visible improvement, but the willingness to go back over finished work and publish what's wrong with it is what makes the evidence trustworthy.
+
 ---
 
 ## What I Did
@@ -21,7 +23,7 @@ The prior year's audit relied on manual screenshots, meetings, and last-minute j
 Where systems have APIs, I pulled evidence programmatically rather than asking engineers to take screenshots:
 
 - **AWS CLI** (7 services): VPCs, security groups, NACLs, ACM certificates, ALB TLS configs, RDS backups, EventBridge rules — all from the production account (075440130607)
-- **GitHub CLI + API**: PR populations across 6 in-scope systems (388+ PRs), code developer listings, repository permissions
+- **GitHub CLI + API**: PR populations across 6 in-scope systems (1,441 PRs), code developer listings, repository permissions
 - **Okta API**: Password policies, MFA configs, authenticators, sign-on policies, SCIM provisioning data. Discovered that Files.com is fully managed via Okta SCIM — this wasn't documented anywhere and resolved two open tickets.
 - **CrowdStrike Falcon API**: Vulnerability scanning data (58K open, 256K closed across 3,874 hosts), sensor/prevention policies, user management. Some endpoints (Detections, Incidents) returned 404 due to API scope limitations — worked around with narrative documents cross-referencing actual incidents.
 - **Confluence REST API**: Policy sweep across 6 spaces with 42 search terms, mapped to control requirements
@@ -43,11 +45,23 @@ The difference between "here's a CSV" and "here's why this satisfies the control
 ### Identified and Closed Gaps Before the Auditor Found Them
 Ran a systematic gap analysis comparing the 2025 SOC 2 report (91 pages, Baker Tilly) against current evidence:
 
-- Identified the 5 prior-year exceptions that auditors will focus on (LS.07 access reviews with 3 sub-exceptions, LS.02 access provisioning, LS.04 termination, LS.15 admin access, EL.03 incident response training). Prepared specific remediation evidence for 3 of 5: LS.02 has 140 provisioning tickets with full lifecycle data, LS.04 has a 40-ticket offboarding population from Jira, LS.15 has per-tool admin listings for all 4 tools. LS.07 is partially addressed (Q4 2025 review complete, Q3 2026 in progress under Jeff White but not yet finished). EL.03 does not appear to have a dedicated ESEC ticket and may need follow-up.
+- Identified the 5 prior-year exceptions that auditors will focus on (LS.07 access reviews with 3 sub-exceptions, LS.02 access provisioning, LS.04 termination, LS.15 admin access, EL.03 incident response training). Prepared specific remediation evidence for 4 of 5: LS.02 has 140 provisioning tickets with full lifecycle data, LS.04 has a 40-ticket offboarding population from Jira, LS.15 has per-tool admin listings for all 4 tools, and **LS.07 now has complete evidence for both selected sample quarters** (see below). EL.03 does not appear to have a dedicated ESEC ticket and may need follow-up.
 - Identified 4 "Done" tickets where evidence didn't match what the auditor actually asked for (VPC CSVs instead of a network diagram, org-level admins instead of per-tool admin listings, AWS-level TLS instead of per-tool configs, EventBridge instead of per-tool scheduled jobs). Created 6 gap tickets (ESEC-272–277) and closed 5 of them in the same session. ESEC-274 (per-tool scheduled jobs) is still open, waiting on Dhananjay.
 - Discovered 8 orphaned production security groups with public ingress — flagged to infra team for remediation before audit review
 - Documented the Splunk → CrowdStrike SIEM migration (January 2026) on every affected control, since the auditor's request list still references "Splunk"
 - Identified control intent mismatches where our evidence didn't match what the control was actually asking for: New Relic is APM not security monitoring (CO.01 — supplemented with CrowdStrike NGSIEM narrative), CloudWatch/SNS is infrastructure monitoring not user-facing downtime notifications (IT.01 — flagged as a gap that may need follow-up)
+
+### Audited My Own Submitted Evidence and Corrected It Before the Auditor Saw It
+On September 14 I stopped collecting and reviewed what had already been submitted. That pass found four defects in evidence already in Baker Tilly's hands. All four were disclosed in a dated revision block in the justification document rather than quietly amended.
+
+- **Recovered a sample quarter that had no evidence.** The LS.07 access-review package identified only the Q4 2025 cycle. Baker Tilly selected **two** sample quarters. The Q1 2026 cycle — performed May–July 2026 — is the Q2 2026 evidence, because Earnest's review cycles were named retroactively (a cycle is named for the quarter whose entitlements were reviewed and performed the following quarter). The original package had mislabeled those three tickets as "continuations of the Q4 2025 cycle," which left the Q2 2026 sample quarter with **nothing identified at all** — on the control with three prior-year sub-exceptions and the highest audit risk of any in scope. Rebuilt the package from the worksheet's own hyperlinks rather than a keyword search: worksheet, coverage summary (46 of 47 in-scope systems reviewed and attested), a 30-item remediation inventory with the identify → approve → execute → confirm chain for each, full Jira ticket text, and IPE explaining the naming convention.
+- **Removed out-of-period rows from two change populations.** The GitHub query had been bounded on the collection date rather than the observation window end, putting 15 September 2026 PRs into populations scoped to close 8/31. Trimmed SLO 388→376 and Servicing 508→505, with itemized excluded-row files attached alongside each population so the exclusion is auditable rather than a row count that silently dropped.
+- **Replaced the wrong artifact on LS.13 Req 96** — the raw 104 MB per-message export had been submitted where the request asked for monthly summary reports.
+- **Reopened two tickets that had been closed prematurely** (ESEC-182/184), which were marked Done while the auditor sample selection they depend on hadn't arrived — making the tracker read as complete when two 9/30 deliverables hadn't started.
+
+Also found and fixed things that were nobody's finding yet: a live PagerDuty integration key in submitted evidence, internal negotiating strategy sitting in a document the auditor reads, 14 duplicate attachments, a misnamed access review cycle ticket, an attested system with no review ticket, a system still listed in-scope eight months after it was decommissioned, and the fact that the entitlement worksheet has no row named for the SLO platform — the system with two of the three prior-year LS.07 sub-exceptions.
+
+The duplicate scan is worth calling out for the right reason: the *first* run reported zero duplicates, because Jira's search endpoint truncates at `maxResults` with no error and had returned 100 of 277 issues. I didn't accept the clean result — the audit tickets live in the 139–280 range and a scan that saw none of them should not have come back clean. Paginating properly surfaced the real 12.
 
 ### Challenged Unnecessary Evidence Requests
 - Closed CM.09 Req 40 (Security Update PowerPoints) as N/A with a formal justification document explaining it was a Navient parent-company reporting artifact, not evidence of control operation
@@ -88,6 +102,8 @@ That's roughly 18 tickets delegated out of 100. The rest — API integrations, e
 | Post-incident reviews written | 3 |
 | Gap tickets created and resolved | 6 (5 closed same-day) |
 | Proactive security findings (orphaned SGs) | 8 |
+| Defects found in my own submitted evidence, disclosed and corrected | 4 |
+| Prior-year exceptions with dedicated remediation evidence | 4 of 5 |
 | Calendar days from start to 79% | ~11 |
 | Other team members' time consumed | < 20 hours total estimated |
 | Third-party GRC tool cost | $0 (no Vanta, Drata, or consultant spend) |
@@ -269,4 +285,5 @@ Year 3 (2028): Package it. If this works at Earnest, it works anywhere. The `soc
 |------|--------|
 | 2026-09-10 | Initial draft — 75% complete, 10 days into collection |
 | 2026-09-11 | Updated to 79% (34/43 parent tickets). Closed CM.02, LS.08, EL.04 contractor/IPE, CO.07. Background check population (50), contractor population (47), performance review population (264+193) delivered. Pentest timing confirmed (~2 weeks). Boss out all week — ran solo. Identified systemic log retention gap as audit risk. CTO skip level delivered with full risk assessment. Processed Gaige Rogers bulk delivery (4 zip files from IT-21925) — closed 9 tickets (ESEC-167, 196, 197, 199, 207, 208, 209, 210, 221). Wrote formal pushback argument against Baker Tilly for LS.13 email security sample-month evidence (platform-enforced control). 9 tickets remain open: 2 Adam-owned (tabletop + pentest), 2 evidence assembly (LS.02 + LS.14), 2 Tyler/Gaige (ITO password + UniFi notifications), 2 auditor sample selection (background checks + perf reviews), 1 living doc. |
+| 2026-09-14 | **Self-audit and correction pass** — reviewed submitted evidence instead of collecting new. Found and disclosed 4 defects in evidence already with Baker Tilly: LS.07 Q2 2026 sample quarter had no identified evidence (rebuilt the Q1 2026 package from worksheet hyperlinks — worksheet, coverage summary, 30-item remediation inventory, ticket exports, IPE); SLO/Servicing change populations included 15 out-of-period rows (trimmed 388→376 and 508→505 with excluded-row sidecars, consolidated 1,456→1,441); LS.13 Req 96 had the raw 104 MB export instead of the monthly summaries; ESEC-182/184 closed while awaiting auditor sample selection (reopened). Also: scrubbed a live PagerDuty integration key from submitted evidence; removed internal negotiating strategy from the auditor-facing justification doc; found and removed 14 duplicate attachments after catching that Jira's search endpoint had silently truncated the first scan to 100 of 277 issues; renamed a misnamed access-review cycle ticket (IT-21950); surfaced Plaid attested with no review ticket, Splunk still listed in-scope post-CrowdStrike, and no SLO-named row in the entitlement worksheet. Rewrote LS.07 in the justification doc, added a revision block, and updated the runbook with the root causes. |
 | | *Add entries as audit progresses and closes* |

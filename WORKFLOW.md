@@ -411,6 +411,71 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - **Engineering dependency:** NS-534 (app-level change populations + access mods for SLO/CASHI/MMAX/SchoolHub/Servicing) needs follow-up push early next week
 - **Populations delivered:** Change tickets (6 systems), code developers, access provisioning (140), Files.com accounts (30), admin listings (4 tools), CrowdStrike users, laptop listing, incidents (3), server backups, backup failures, terminations (40), background checks (50), contractors (47), performance reviews (264 EOY + 193 MY documented, de-identified lists pending from HR)
 
+### September 14, 2026 (Session 8 — self-audit and correction pass)
+
+A review of what had already been submitted, rather than new collection. Found and fixed four
+defects in evidence already in the auditor's hands. Everything was disclosed in the justification
+doc rather than quietly amended.
+
+**1. LS.07 — the Q2 2026 sample quarter had no identified evidence (most serious finding).**
+The Session 7 access-review export was built from the JQL keyword search
+`project = IT AND summary ~ "access review"`, got 17 rows, and mislabeled IT-21054/21195/21430 as
+"continuations of the Q4 2025 review cycle." They are the **Q1 2026 cycle**, performed
+May 13 – Jul 14 2026 — which, under Earnest's then-retroactive naming convention, *is* the Q2 2026
+sample-quarter review. As filed, ESEC-181/183 covered only Q4 2025.
+- Confirmed the convention with Adam: cycles were named for the quarter whose entitlements were
+  reviewed and performed the following quarter; the convention has since flipped. The worksheet
+  filename `2026 Q1_2 Entitlement Review Worksheet` encodes it. I had renamed that file to
+  "2026 Q1" earlier in the session, stripping the `_2` that proves coverage — restored and verified
+  SHA-256 against the source.
+- Built the Q1 2026 package from the worksheet's own **hyperlinks** (`cell.hyperlink.target`, cols
+  F/I/L → 12 tickets) instead of a keyword search: worksheet, coverage summary, 30-item remediation
+  inventory, full ticket exports, ticket CSVs, package IPE. Uploaded to ESEC-181/183.
+- Rebuilt `it_access_review_tickets.csv` to a corrected 8-ticket scope pulled live from Jira, with
+  an `EXCLUDED` list documenting why each of 10 tickets was dropped. Rewrote
+  `access_review_tickets_ipe.txt` (the old one was 853 bytes and wrong on three counts) and
+  regenerated `00_ALL_ACCESS_REVIEW_TICKETS.md`, which had been grouping Q4 2025 and Q1 2026 under
+  one heading and filing IT-20632 under "Q3 2025 Remediation."
+- Per Adam, dropped all Q3 material entirely — neither Q3 cycle is a selected sample quarter. Kept
+  the correction of the prior ESEC-181/183 comments but made it non-specific, since leaving a false
+  statement in the audit record would be worse than an awkward correction.
+- **IT-21950 renamed** from "Q2 2026 Access Review" to "Q3 2026 Access Review" (created 2026-09-11
+  alongside every other Q3 2026 cycle ticket). Surfaced it to Adam first; renamed only after
+  he confirmed, with an explanatory comment on the ticket.
+- New findings disclosed: Plaid attested with no review-ticket link (1 of 46); Splunk still listed
+  in-scope post-CrowdStrike; the worksheet is organized by system-of-access so **SLO has no row of
+  its own** — the system with two 2025 sub-exceptions.
+
+**2. CM.02 — change populations included out-of-period rows.** The GitHub query used the collection
+date as the upper bound (`merged:2025-10-01..2026-09-04`) instead of the observation window end
+(8/31/2026). SLO 388→376, Servicing 508→505, consolidated 1,456→1,441. Trimmed with
+`*_excluded_out_of_period.csv` sidecars so the exclusion is auditable, patched all three IPEs with a
+dated correction block, re-uploaded to ESEC-142/147/148.
+
+**3. LS.13 Req 96 — wrong artifact submitted.** The attachment was the raw 104 MB per-message export,
+not the monthly summary reports the request asked for. Replaced with 5 summary files and the June
+2026 figures (94,431 scanned / 93,735 spam / 696 phishing / 0 malware; 89,109 external / 5,322
+internal; all 30 days present).
+
+**4. ESEC-182/184 reopened.** Both had been closed while the remediation samples they ask for still
+await Baker Tilly's sample selection. Reopened to To Do with the 30-item inventory staged.
+
+**Also done:**
+- Scrubbed a live PagerDuty integration key from submitted evidence.
+- ESEC-197 message-log summary written; auditor Q&A removed from ESEC-252.
+- **Duplicate attachment sweep across all 277 ESEC issues / 345 attachments** — the first scan had
+  reported zero duplicates because `jira.search()` silently truncates at `maxResults` and returned
+  ESEC-1..100 when the audit tickets live at ESEC-139..280. Added `search_all()` with cursor
+  pagination; the real 12 duplicates surfaced. 14 deletions executed, each guarded by a live
+  byte-size check on the keeper, 0 blocked. Two ESEC-208 files consolidated onto ESEC-208. The
+  certificate of destruction was left on **both** ESEC-209 and ESEC-210 since Req 248 and 249 each
+  call for it, with a comment saying so.
+- Removed the "Pushback on this request" section from the justification doc. The technical argument
+  was sound; the framing ("analogous to asking for proof that AWS didn't disable encryption at rest
+  on S3") is internal strategy and does not belong in a document the auditor reads.
+- Justification doc rerun: LS.07 section rewritten, CM.02 window correction documented, revision
+  block added at the top, open-items table updated, dated 9/14.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -455,4 +520,54 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 23. **Create tickets on the owning team's board, not just ESEC.** Asking Dhananjay for Airflow/Looker evidence works better with a DNA ticket (his team's board) than an ESEC ticket he'll never look at. Cross-reference back to the ESEC ticket for your own tracking.
 24. **Audit log retention must cover the full observation window.** Google Workspace audit logs default to 6 months. If your observation window is 12 months, the first 6 months have no log data by the time the auditor asks. This affects any system with less than 365-day retention. Either upgrade to extended retention (Google Workspace Enterprise) or set up log forwarding to longer-retention storage (BigQuery, S3, CrowdStrike SIEM ingestion) *before* the observation window opens. You can't retroactively produce logs that don't exist.
 
-25. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+25. **Bound every population query on the observation window end, never on `date`/today.** Set
+    `WINDOW_START`/`WINDOW_END` as constants at the top of the script and assert
+    `max(date) <= WINDOW_END` after every pull. The 2026 SLO and Servicing populations were pulled
+    with `merged:2025-10-01..2026-09-04` because 9/04 was the day the script ran, putting 15
+    out-of-period PRs into submitted evidence. Caught on 9/14, after submission.
+26. **Derive populations from the artifact's own links, not from a keyword search.** The access
+    review ticket population came from `summary ~ "access review"` and was wrong four ways —
+    including mislabeling the entire Q1 2026 cycle, which left a selected sample quarter with no
+    identified evidence. The worksheet's hyperlinks (`openpyxl` → `cell.hyperlink.target`) are the
+    authoritative population. A keyword search finds tickets that *mention* the thing; the artifact's
+    links are the thing.
+27. **Never trust a single-page API search when completeness matters.** Jira's
+    `/rest/api/3/search/jql` truncates at `maxResults` with no error and no flag. A duplicate scan
+    reported zero duplicates because it had seen 100 of 277 issues. Always page to `isLast`.
+28. **Record the *reason* a cycle maps to a sample quarter, not just the mapping.** Earnest's review
+    cycles were named retroactively (Q1 cycle = reviewed in Q2) and the convention changed mid-audit,
+    so **cycle names alone are meaningless for timing.** Resolve by created/resolved dates, add a
+    `Covers Sample Quarter` column, and explain the convention in the IPE. And do not "clean up"
+    filenames that encode this — `2026 Q1_2` is evidence, not a typo.
+29. **Structure the entitlement worksheet by the audit's application scope, not only by
+    system-of-access.** Four in-scope apps had their own rows; Servicing was buried in "Admin
+    Internal"; SLO — the system with two 2025 sub-exceptions — had no row at all, even though its
+    access paths were all reviewed. Add an explicit row per in-scope audit application so coverage is
+    self-evident rather than inferred.
+30. **Reconcile owner attestations against an authoritative source yourself.** Security's
+    verification role is what caught 4 Okta accounts (vs. the Navient Workday active-employee export)
+    and 5 Admin Internal accounts (vs. Google Workspace last-sign-in) that the owners' reviews
+    missed. It's also the cleanest demonstration of segregation of duties in the review process.
+31. **Self-audit submitted evidence before the auditor does, and disclose what you find.** A dated
+    revision block listing four self-identified corrections reads as a functioning control
+    environment. The same four found by Baker Tilly after a silent edit reads as the opposite. When
+    trimming a submitted population, always attach an itemized `*_excluded_out_of_period.csv` — a row
+    count that quietly drops between submissions is an IPE completeness problem.
+32. **Keep negotiating strategy out of auditor-facing documents.** Keep the technical argument; drop
+    the framing. State what the evidence is, why it meets the control intent, and offer to discuss
+    what would satisfy the requirement.
+33. **Don't close a ticket that's waiting on someone else's input.** ESEC-182/184 were marked Done
+    while still awaiting auditor sample selection, which made the tracker read as complete when two
+    9/30 deliverables hadn't started. Stage the evidence, leave the ticket open.
+34. **Explain discontinued controls as decisions, not gaps.** The worksheet's "Ready for Exec
+    Review?" / "Exec Reviewer" / "Sign Off" columns are vestigial — executive sign-off was
+    deliberately dropped because it consumed leadership time for no practical assurance; the signing
+    executive had no knowledge of whether a given user's access was appropriate. System owners own
+    the review, Security orchestrates and verifies. Explain the accountability model affirmatively
+    and recommend removing the columns. Never let blank columns be read as a skipped control step.
+35. **Delete a duplicate attachment only when it's on the same ticket.** If the same file is
+    responsive to multiple requests, leave a copy on each and say so in a comment. Guard every
+    deletion with a live byte-size check on the keeper, and post a dated provenance comment for
+    anything removed or moved — an attachment that vanishes from an audit ticket with no explanation
+    is worse than the duplicate was.
+36. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.

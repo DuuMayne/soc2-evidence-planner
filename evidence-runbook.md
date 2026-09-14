@@ -452,23 +452,129 @@ Each entry follows this structure:
 - **Decision:** Used GitHub PRs (not Jira tickets) as source of truth for code changes — gives broader coverage and limits auditor exposure to the observation window only
 - **Collection steps:**
   1. Load repo-to-product mapping from "Repo List with Unit Test Coverage .xlsx"
-  2. For each product's repos:
-     `gh search prs "repo:meetearnest/{repo}" --merged --merged-at "2025-10-01..2026-09-04" --limit 1000`
-  3. Extract: repo, pr_number, title, url, author, merged_date
-  4. Write per-product CSV
+  2. **Set the window bounds as constants first, from the observation window — never from `date`.**
+     `WINDOW_START=2025-10-01; WINDOW_END=2026-08-31`
+  3. For each product's repos:
+     `gh search prs "repo:meetearnest/{repo}" --merged --merged-at "$WINDOW_START..$WINDOW_END" --limit 1000`
+  4. Extract: repo, pr_number, title, url, author, merged_date
+  5. **Assert the bounds after the pull:** `max(merged_date) <= WINDOW_END` and
+     `min(merged_date) >= WINDOW_START`, per population. Fail loudly, don't warn.
+  6. Write per-product CSV
 - **Output directory:** `evidence/github/`
-- **Output files:**
-  - `slo_platform_change_population.csv` — 388 PRs
+- **Output files (corrected 2026-09-14):**
+  - `slo_platform_change_population.csv` — 376 PRs
   - `schoolhub_spoke_change_population.csv` — 204 PRs
   - `cashi_change_population.csv` — 140 PRs
   - `mmax_change_population.csv` — 216 PRs
-  - `servicing_platform_change_population.csv` — 508 PRs
+  - `servicing_platform_change_population.csv` — 505 PRs
+  - `file_transfer_service_change_population.csv` — 11 PRs
+  - Consolidated total: **1,441** merged PRs
 - **Lessons learned:**
+  - ⚠️ **Bound the query on the observation window end, not the collection date.** The first pull
+    used `merged:2025-10-01..2026-09-04` — 9/04 was simply the day the script ran. That put PRs
+    merged September 1–4, 2026 into two populations that are scoped to end 8/31/2026: SLO 388→376
+    (12 rows) and Servicing 508→505 (3 rows). Found on 9/14 *after* the populations had already
+    been submitted to the auditor, so it had to be disclosed and re-uploaded rather than quietly
+    fixed. The window end is a fixed constant for the whole audit; hardcode it once at the top of
+    the script and assert against it after every pull.
+  - When trimming a submitted population, write the removed rows to a
+    `*_excluded_out_of_period.csv` sidecar and attach it alongside. A row count that silently
+    drops between submissions is an IPE completeness problem; an itemized exclusion list is not.
+    See `analysis_sept14/trim_change_populations.py`.
   - GitHub Search API rate limits at ~30 req/min for search — add retries with backoff
   - Some repos return 403 briefly then succeed on retry (e.g., `partner`, `lfm-integration-service`)
   - Repo names don't always match product names — mapping spreadsheet is essential
-  - `--merged-at` filter defines the observation window precisely — no need to filter post-query
-  - GitHub yields more complete change populations than Jira (388 PRs vs 107 Jira tickets for SLO)
+  - GitHub yields more complete change populations than Jira (376 PRs vs 107 Jira tickets for SLO)
+
+---
+
+## Access Rights Reviews — LS.07 (ESEC-181/182/183/184)
+
+### ESEC-181/183: Req 73 & 75 — Entitlement Review Evidence for Sample Quarters
+- **Evidence type:** Population / Report / Sample
+- **Status:** ✅ Done (both sample quarters)
+- **Source systems:** Entitlement Review Worksheet (.xlsx), Jira (IT, ENABLE, SEC, CH, DNA, FULL, ID projects)
+- **Automation:** partial — the worksheet is manually maintained; ticket pull and packaging are scripted
+- **Sample quarters:** Q4 2025 and Q2 2026 (selected by Baker Tilly)
+
+**⚠️ Read this before touching LS.07 evidence — cycle naming.** Earnest ran access reviews
+*retroactively* through the first half of the audit period: a cycle is named for the quarter whose
+**entitlements** were reviewed, and the review is **performed the following quarter**. So the
+**Q1 2026 cycle is the review that operated during Q2 2026** and is the Q2 2026 sample-quarter
+evidence. The worksheet filename encodes it: `2026 Q1_2 Entitlement Review Worksheet` = Q1
+entitlements reviewed in Q2. **Never rename that file** — the `_2` is the proof of coverage.
+The convention has since changed to name a cycle for the quarter the review is performed in, so
+**cycle names alone tell you nothing about timing.** Always resolve by ticket created/resolved
+dates, and record the answer in a `Covers Sample Quarter` column.
+
+| Cycle | Performed | Covers sample quarter | Cycle tickets |
+|---|---|---|---|
+| Q4 2025 | Jan 29 – Jul 7, 2026 | Q4 2025 | IT-20286, IT-20593 (+ remediation IT-20632, IT-20640, IT-21038) |
+| Q1 2026 | May 13 – Jul 14, 2026 | **Q2 2026** | IT-21054, IT-21195 (+ remediation IT-21430) |
+
+- **Collection steps:**
+  1. Get the cycle's worksheet. Copy it byte-for-byte (`shutil.copy2`) and **verify SHA-256 against
+     the source** — the worksheet is the primary artifact, so prove the copy is unmodified.
+  2. Read the linked tickets out of the worksheet with `openpyxl` via
+     `cell.hyperlink.target`, **not** a JQL keyword search. Cols F/I/L hold the evidence-request,
+     initial-review and remediation ticket links. This is how you get the real population.
+  3. Pull each ticket's full description + every comment; flatten ADF → text. No summarizing.
+  4. Build the coverage summary: systems tracked, evidence collected, owner attested, exceptions.
+  5. Build the remediation inventory — one row per access change, with the
+     identify → owner approve → execute → confirm chain and its Jira anchors.
+  6. Reconcile: remediation row count must tie to what the tickets say was executed.
+- **Output directory:** `evidence/access_reviews/<cycle>/`
+- **Output files:** the worksheet (original filename), `*_access_review_summary.md`,
+  `*_access_review_remediation.md`, `*_access_review_ticket_exports.md`,
+  `*_access_review_tickets.csv`, `it_access_review_tickets.csv`, `*_access_review_ipe.txt`
+- **Scripts:** `analysis_sept14/build_q1q2_package.py`, `pull_q1q2_review_tickets.py`,
+  `build_access_review_ticket_index.py`, `rebuild_ticket_exports.py`
+- **IPE requirements:** which sample quarter the package covers and *why* (the naming convention);
+  worksheet SHA-256; how the ticket population was derived (hyperlinks, not keyword search);
+  remediation row-count reconciliation; every exception listed
+- **Lessons learned:**
+  - ⚠️ **Never build the ticket population from `summary ~ "access review"`.** The 9/11 version did,
+    got 17 rows, and was wrong four ways: it mislabeled the three Q1 2026 tickets as Q4 2025
+    "continuations," which left **the Q2 2026 sample quarter with no identified evidence at all** —
+    the single most consequential error of the engagement. It also mislabeled the Q3 2025 cycle as
+    Q3 2026, pulled in two provisioning requests that merely contained the word "review," and
+    misgrouped IT-20632's remediation under the wrong cycle. Derive the population from the
+    worksheet's own hyperlinks.
+  - ⚠️ **`jira.search()` silently truncates at `maxResults`.** `project = ESEC ORDER BY key ASC`
+    returned ESEC-1..100 and made a duplicate-attachment scan report *zero* duplicates. Use
+    `jira.search_all()` (cursor pagination via `nextPageToken`/`isLast`) for anything where
+    completeness matters — which for evidence work is everything. 100 → 277 issues.
+  - **The worksheet is organized by system-of-access, not by the audit's application scope.** Four
+    in-scope apps appear by name (SchoolHub/SPOKE, CASHI, MMAX, files.com); Servicing maps to the
+    `Admin Internal` row; **SLO has no row of its own** — precisely the system with two 2025
+    sub-exceptions. Add an explicit row per in-scope audit application to the template.
+  - Reconcile the worksheet against authoritative sources yourself rather than relying only on
+    owner attestation — this is what Security's verification role produces. Doing so surfaced 4
+    Okta accounts (vs. the Navient Workday active-employee export) and 5 Admin Internal accounts
+    (vs. Google Workspace last-sign-in) that the owners' reviews had not caught.
+  - Check every attested row actually has a review ticket link. Plaid was 1 of 46 with an empty
+    `Initial Review Ticket` cell — attested by worksheet record alone.
+  - Watch for stale template rows. Splunk was still listed as in-scope well after the January 2026
+    migration to CrowdStrike.
+  - **The "Ready for Exec Review?" / "Exec Reviewer" / "Sign Off" columns are vestigial and
+    intentionally unused.** Executive sign-off was deliberately discontinued — wasted resources
+    for no practical assurance, since the signing executive had no knowledge of whether a given
+    user's access was appropriate. **System owners own the review; Security orchestrates and
+    verifies.** Never characterize the blank columns as a control gap or a missed step; explain
+    the accountability model and recommend removing the columns from the template.
+  - Cross-check a cycle ticket's *name* against its created date before trusting it. IT-21950 was
+    titled "Q2 2026 Access Review" but was created 2026-09-11 alongside every other Q3 2026 cycle
+    ticket — a misnamed Q3 review; renamed with an explanatory comment.
+
+### ESEC-182/184: Req 73b & 75b — Remediation Samples
+- **Status:** 🔄 To Do — reopened 2026-09-14, awaiting auditor sample selection
+- **Why reopened:** both had been closed while the samples they ask for hadn't been selected yet.
+  A request that is contingent on auditor sample selection stays open until the samples arrive —
+  closing it makes the tracker read as complete when it isn't.
+- **Staged evidence:** `2026_Q1_access_review_remediation.md` — 30 access changes across 6 systems
+  (Env0 12, Admin Internal 5, Okta 4, Amplitude/Segment 3, Docker Hub 3, Zendesk 3 admin→agent
+  downgrades), all completed, each with its Jira chain. Per-sample before/after evidence gets
+  produced against these entries once BT selects.
 
 ---
 
@@ -516,7 +622,57 @@ Each entry follows this structure:
 
 ---
 
-## Tickets Not Yet Addressed
+## Evidence Hygiene and Self-Correction
+
+Procedures for the work that happens *after* evidence is submitted. Everything here came out of the
+2026-09-14 review pass, which found four defects in already-submitted evidence.
+
+### Auditing your own submitted evidence
+- **Run a completeness scan across the whole ESEC project, not a sample.** Use
+  `jira.search_all("project = ESEC ORDER BY key ASC", fields="summary,status,attachment")`.
+  With the truncating `search()` this returned 100 of 277 issues and reported zero duplicates.
+- **Find duplicate attachments by byte size**, grouped per ticket. Identical size on the same
+  ticket is a near-certain duplicate; confirm with SHA-256 if the file matters.
+- **Dedupe rule:** delete a duplicate only when the identical file is on the **same** ticket. If
+  the same file legitimately sits on **multiple** tickets — because it's responsive to more than
+  one request — **leave every copy.** Note that intent in a comment so it doesn't read as sloppiness.
+  Keep the normalized snake_case copy, drop the original upload.
+- **Guard every deletion.** Before deleting, re-pull the ticket live and confirm the keeper still
+  exists at an identical byte size; skip the delete otherwise. See
+  `analysis_sept14/dedupe_and_move.py` — pre-flight, execute, verify, in that order.
+- **Comment on every change.** Any attachment removed or moved gets a dated provenance comment
+  saying what was removed, its byte size, and where the surviving copy is. An attachment that
+  vanishes from an audit ticket with no explanation is worse than the duplicate was.
+
+### When submitted evidence turns out to be wrong
+- **Disclose it, don't quietly amend it.** Add a dated revision block to
+  `evidence_request_justification.md` listing each correction, and a dated correction section to
+  the affected IPE. Self-identified and disclosed reads as a working control environment;
+  discovered by the auditor after a silent edit does not.
+- **Show the delta.** Old value → new value, row counts included, plus a sidecar file itemizing
+  any rows removed.
+- **Reopen tickets that were closed prematurely.** ESEC-182/184 were closed while still waiting on
+  auditor sample selection. Requests contingent on someone else's input stay open.
+- **Never leave a false statement standing in the audit record.** When correcting a prior comment,
+  post the correction even if it's awkward — but keep it factual and scoped to what was wrong.
+
+### Writing auditor-facing documents
+- **No internal negotiating strategy in anything the auditor sees.** The justification doc had a
+  "Pushback on this request" section arguing a request was "analogous to asking for proof that AWS
+  didn't disable encryption at rest on S3." Keep the substantive technical argument, drop the
+  framing — state what the evidence is, why it meets the control intent, and offer to discuss.
+- **Explain a deliberate process decision as a decision, not a gap.** Discontinued controls and
+  vestigial template fields need an affirmative explanation of the current accountability model.
+- **Don't claim coverage you haven't traced.** Map each in-scope audit application to the specific
+  artifact that covers it, and say so explicitly when the mapping is inferred rather than named.
+
+---
+
+## Backlog Snapshot (pre-collection, historical)
+
+The lists below were the starting backlog and are **not** a current status view — most of these are
+now closed. For live status, pull ESEC with `jira.search_all()` and check the Open Items Summary in
+`evidence_request_justification.md`.
 
 ### Password & Authentication (ESEC-164)
 - **ESEC-166:** Okta password settings → needs OKTA_DOMAIN + OKTA_API_TOKEN
@@ -578,6 +734,14 @@ Each entry follows this structure:
 - **Auth:** Basic Auth (email + API token from 1Password)
 - **Search:** `GET /rest/api/3/search/jql?jql=...` (NOT the old `/search` — returns 410)
 - **Pagination:** Cursor-based (`nextPageToken`/`isLast`), NOT offset-based
+- ⚠️ **A single search call silently truncates at `maxResults` — no error, no flag.** It just
+  returns fewer issues than match. Always use the paging wrapper (`jira.search_all()`) for
+  anything where completeness matters. This produced a false "zero duplicates found" result on
+  9/14 by returning ESEC-1..100 when the audit tickets live at ESEC-139..280.
+- **Rename an issue:** `PUT /rest/api/3/issue/{key}` with `{"fields": {"summary": "..."}}`
+- **Attachment delete:** `DELETE /rest/api/3/attachment/{id}` — returns empty body, so read it raw
+- ⚠️ Comment bodies are **ADF** — a plain string is rejected. Reading requires flattening ADF back
+  to text (`content[].content[].text`).
 - **Rate limit:** ~100 req/60s, scripts use 90 req/60s window
 - **Attachments:** `POST /rest/api/3/issue/{key}/attachments` with `X-Atlassian-Token: no-check` and `Content-Type: None` override
 - **Comments:** `POST /rest/api/3/issue/{key}/comment` with ADF body
