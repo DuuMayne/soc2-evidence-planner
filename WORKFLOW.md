@@ -502,6 +502,51 @@ functions, conflated in one label.
 - Justification doc rerun: LS.07 section rewritten, CM.02 window correction documented, revision
   block added at the top, open-items table updated, dated 9/14.
 
+### September 14, 2026 (Session 8, continued — Drive staging and CO.08 close-out)
+
+**Staged the full submission for Google Drive.** `stage_for_drive.py` mirrors the Jira hierarchy the
+auditor already navigates — control folder, then request folder — so any file traces in either
+direction. Result: `~/Downloads/2026 SOC II/SOC2_2026_Evidence_Upload`, **334 files / 83 MB / 36
+controls / 108 request folders.** All 308 Jira attachments downloaded, size-verified against Jira on
+download, then re-hashed on disk against the manifest: 308/308 SHA-256 matches, no failures, no
+unaccounted files, no Drive-hostile filename characters. Filenames preserved byte-for-byte.
+- Attachment download needed manual redirect handling: `/attachment/content/{id}` 302s to a signed
+  media host that rejects the request if the Basic auth header is forwarded.
+- 16 requests have no attachments. The first pass wrote one generic
+  `_NOTHING_COLLECTED_YET.txt` into all of them — wrong for four, which are closed `Done` with
+  substantive rationale. Split into `CLOSURE_RATIONALE.txt` (the reason *is* the deliverable — a true
+  N/A, or an IPE that can't take query/row-count form) and `_PENDING - <blocker>.txt` naming whose
+  move it is. 12 pending: 7 awaiting Baker Tilly's sample selection, 1 HR + selection, 1 Earnest IT,
+  2 tabletop, 1 pentest.
+- Writing those files surfaced two internal contradictions in already-closed tickets: ESEC-234's
+  automated comment cited an IPE covering "Jira queries with parameters and row counts" when the
+  incident population isn't a query at all, and ESEC-235's said "172 incidents/alerts" when the
+  incident count is 3 (172 was the raw alert count). Both superseded in the closure rationale.
+- `README.txt` leads with the four things that will otherwise look wrong: Splunk-named folders
+  containing CrowdStrike, text-only folders being deliberate, access review cycles named for the
+  quarter *reviewed*, and the vestigial exec sign-off columns. Every number in it and in `INDEX.md`
+  is computed from the manifest, not asserted.
+
+**CO.08 Req 136 closed out properly.** It held a single end-user FileVault screenshot — thin evidence
+for a 354-device MDM-enforced control. The screenshots that actually prove per-blueprint enforcement
+already existed but were filed under Req 137 as config evidence.
+- Population pivots to **6 blueprints / 354 devices**. Three of the six (349 devices) already had
+  blueprint-side evidence; restaged into Req 136 under blueprint-descriptive filenames with
+  provenance back to each ESEC-231 attachment ID. Uploaded to ESEC-230 (atts 231722–231726) with
+  `00_COVERAGE_MATRIX.md`.
+- The primary artifact is the library item's **Assignment Maps list**, which names all 13 blueprints
+  the FileVault profile is assigned to, including all 6 in the population — so 354-device coverage is
+  provable from one screenshot. `config_4` is the strongest: status panel reading 31 Success / 0
+  Error / 0 Other.
+- Adam's instinct was to close the remaining 3 blueprints (5 devices) as test/non-prod. Checking the
+  population showed all 5 are MacBook Pros assigned to named individuals, all checked in on the
+  export date, one belonging to Earnest IT — production laptops in a blueprint someone named "test."
+  Closed instead on the enforcement argument, which covers all 354 without needing an exclusion, and
+  disclosed the difference in evidence form with screenshots offered on request. See lessons 39–40.
+- Justification doc CO.08 section rewritten accordingly and re-uploaded to ESEC-278 (att 231727,
+  superseding 231712). Framed as an addition, not a correction — the revision block still says five
+  defects, because nothing previously submitted under CO.08 was inaccurate.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -614,4 +659,22 @@ functions, conflated in one label.
     date converts "we didn't keep it" into "no customer of this platform can keep it," which the
     auditor can verify without trusting us. Do the rolling-window arithmetic explicitly, and state
     when the *current* evidence will age out too.
-39. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+39. **A group name is not a scoping statement.** CO.08 had 5 devices in three blueprints without
+    per-blueprint screenshots, one of them named `Harry's Test blueprint - Tahoe`. Closing them as
+    "test/non-prod, out of scope" would have been fast and wrong: pulling the members showed 5
+    MacBook Pros assigned to named individuals, all checked in on the population export date, one
+    belonging to a member of Earnest IT. Before excluding anything because of what its container is
+    called — blueprint, AD group, OU, tag, VPC — pull the members and look at them. Then ask whether
+    you need the exclusion at all; here encryption *was* enforced on all 5, so the honest close was
+    the stronger one. A scoping argument caught being wrong doesn't just lose you that control, it
+    discredits every other scoping argument in the submission.
+40. **For profile-enforced controls, evidence the enforcement grouping, not the devices.** Pivot the
+    population on whatever the profile attaches to (blueprint, GPO, policy set), screenshot the
+    profile's own assignment list so one artifact names every group it covers, then confirm from the
+    group side with the **status panel open** — `31 Success / 0 Error / 0 Other` is proof of
+    application, where an assignment screenshot is only proof of intent. That turns 354 devices into
+    6 screenshots without weakening the argument. Reconcile any count difference between the console
+    and the population in the evidence itself (a blueprint header read 302 against 289 MacBooks — 13
+    non-Mac devices), because the auditor will compare those two numbers whether you explain them or
+    not.
+41. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.

@@ -620,6 +620,45 @@ dates, and record the answer in a `Covers Sample Quarter` column.
   - No Iru API available — evidence is manual exports and screenshots
   - Always note stale devices in comments to preempt auditor questions
 
+#### Per-blueprint coverage (added 2026-09-14)
+
+Req 136 originally held one end-user FileVault screenshot. For an MDM-enforced control that is thin:
+it evidences one device out of 354. The pattern that closes it properly, and generalises to any
+MDM/GPO/profile-enforced control:
+
+1. **Pivot the population on the enforcement grouping.** `Blueprint Name` in the Req 134 export
+   resolves to 6 blueprints across 354 devices. The blueprint is the unit the profile attaches to,
+   so it is the unit the evidence should be organised by.
+2. **Screenshot the library item's own Assignment Maps list.** This is the primary artifact — one
+   screenshot naming every blueprint the profile is assigned to. Because assignment is what causes
+   the profile to apply, a blueprint appearing in that list evidences enforcement on every device
+   in it. This is what makes 354-device coverage provable without 354 screenshots.
+3. **Confirm from the blueprint side where you can**, and open the status side panel. The best
+   artifact in the CO.08 set shows `31 Success / 0 Error / 0 Other` against 31 devices — that is
+   successful *application*, not just assignment, and it is the difference between "we configured
+   it" and "it is on." Capture that panel by default.
+4. **Reconcile blueprint headers against the population.** Iru headers count all enrolled devices;
+   the population is filtered to MacBooks. One blueprint read 302 vs 289 — 13 non-Mac devices.
+   Say so in the evidence, because an auditor comparing the two numbers will otherwise file it.
+
+#### Do not scope devices out on the strength of a blueprint name
+
+Three blueprints held 5 devices and lacked a blueprint-side screenshot. The tempting close was
+"test/non-prod, out of scope" — one of them is literally named `Harry's Test blueprint - Tahoe`.
+
+Checking the population killed that argument: all 5 are MacBook Pros assigned to named individuals,
+all checked in on the export date, and one belongs to a member of Earnest IT. They are production
+laptops in a blueprint someone named "test." Asserting otherwise would have handed Baker Tilly a
+sample that disproves the claim, and the collateral damage is worse than the finding — a scoping
+argument caught being wrong discredits every *other* scoping argument in the submission.
+
+**The rule: a blueprint/group/OU name is an administrative label, not a scoping statement.** Before
+excluding anything on the basis of what a container is called, pull the members and look at them.
+And check whether you need the exclusion at all — here FileVault *was* enforced on all 5 via the
+Assignment Maps list, so the honest close was stronger than the scoping argument would have been.
+Disclose the difference in evidence form ("evidenced from the profile side only, screenshots
+available on request") and let the control pass on its merits.
+
 ---
 
 ## Evidence Hygiene and Self-Correction
