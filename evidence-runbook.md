@@ -625,7 +625,7 @@ dates, and record the answer in a `Covers Sample Quarter` column.
 ## Evidence Hygiene and Self-Correction
 
 Procedures for the work that happens *after* evidence is submitted. Everything here came out of the
-2026-09-14 review pass, which found four defects in already-submitted evidence.
+2026-09-14 review pass, which found five defects in already-submitted evidence.
 
 ### Auditing your own submitted evidence
 - **Run a completeness scan across the whole ESEC project, not a sample.** Use
@@ -665,6 +665,83 @@ Procedures for the work that happens *after* evidence is submitted. Everything h
   vestigial template fields need an affirmative explanation of the current accountability model.
 - **Don't claim coverage you haven't traced.** Map each in-scope audit application to the specific
   artifact that covers it, and say so explicitly when the mapping is inferred rather than named.
+- **Verify every vendor name against a query the auditor could run.** WHOIS, a DNS record, a console
+  screenshot. Not inference from an adjacent record in the same zone. See LS.13 below.
+- **Scope an unobtainability argument to the exact system whose data is gone.** "Cannot be produced"
+  is a claim about a named system's retention, not about the control. Write "no Google Workspace
+  customer can produce X," not "X cannot be produced" — the second version is falsified the moment
+  anyone finds a second data source, and it makes every other statement in the document suspect.
+
+---
+
+## Email Security — LS.13 (ESEC-196/197/198/199)
+
+### Earnest's inbound mail path has TWO scanning layers
+Read this before writing anything about LS.13.
+
+1. **Cloudflare Area 1 Security** — the inbound gateway. MX records are
+   `mailstream-east.mxrecord.io` and `mailstream-west.mxrecord.io`. First-line scanning for
+   phishing, malware, BEC and malicious links, applied *before* Google sees the mail.
+2. **Google Workspace (Gmail)** — mailbox provider, its own platform scanning plus the
+   customer-configurable Gmail Safety settings.
+
+**Valimail (`vali.email`) is NOT the gateway.** It appears in the SPF macro-include and the DMARC
+`rua` destination — outbound authentication and DMARC report processing. It appears in no MX record.
+The 9/8/2026 DNS evidence labeled it the gateway and was wrong for the entire year until corrected
+on 9/14. Verify with:
+```
+whois mxrecord.io          # Registrant Organization: Area 1 Security; Registrar: Cloudflare, Inc
+dig +short A mailstream-east.mxrecord.io   # 172.65.213.128
+whois 172.65.213.128       # NetName: CLOUDFLARENET
+```
+**Any LS.13 evidence set must cover both layers.** Req 96/97/98 as filed in 2026 covered Google only.
+
+**Procurement note:** active evaluation of **Material Security** and **Abnormal Security** to replace
+Gmail + Area 1 as of 9/2026. Not complete, not in production, does not affect the 10/1/2025–9/30/2026
+period. When it lands, document the migration at the time and carry retention requirements into
+selection.
+
+### Google Workspace log retention — the hard constraint
+Source: `https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times`
+
+| Item | Retention |
+|---|---|
+| Gmail log events | 6 months |
+| Email log search | 30 days |
+| Admin log events | 6 months |
+| Security reports | 6 months |
+| Audit data via API | 6 months |
+| Vault log events | Indefinite |
+
+The page states verbatim: *"Administrators cannot delete log event data or change the length of time
+that the data is available for."* Quote it with the URL and the page's last-updated date — it turns
+"we didn't keep it" into "no customer of this platform can keep it."
+
+- **Retention is rolling, measured backward from today.** Six months before 9/14/2026 ≈ 3/14/2026.
+  Oct 2025 aged out ~Apr 2026; Dec 2025 aged out ~Jun 2026. Both were gone before the request arrived.
+- **The current data ages out too.** June 2026 goes dark around Dec 2026. Say so in the document.
+- **Config-continuity is not a workaround.** Admin log events are *also* 6 months, so
+  "current config + audit trail showing no change" only reaches ~Mar 2026 forward. Mention this
+  pre-emptively or it looks like an untried option.
+- **Vault is the exception** — indefinite retention. Check what's in Vault before conceding a month.
+- **Area 1 retains independently of Google.** Check it before writing any month off.
+
+### Producing point-in-time Gmail config
+There is no historical-config API for anyone. The constructible equivalent:
+- **Current state:** Cloud Identity Policy API — `cloudidentity.googleapis.com/v1/policies`
+  (scope `cloud-identity.policies.readonly`), returns the live Gmail Safety settings machine-readably.
+- **Absence of change:** Admin SDK Reports API `applicationName=admin`
+  (scope `admin.reports.audit.readonly`), showing no config-change events in the window — bounded by
+  the same 6-month retention.
+Both need domain-wide delegation, the same blocker as ESEC-167.
+
+### Remediation carried forward
+1. Gmail log export to BigQuery — retention under Earnest's control, not Google's.
+2. Monthly snapshot of the Gmail security summary into the evidence repo.
+3. Monthly snapshot of Gmail Safety config via Cloud Identity Policy API.
+4. Compile the Area 1 evidence set — config, policy, admin listing, detection output.
+5. Audit every in-scope system for sub-365-day retention. The 6-month default also hits Drive,
+   Admin, Login, Chat and Calendar log events, not just Gmail.
 
 ---
 

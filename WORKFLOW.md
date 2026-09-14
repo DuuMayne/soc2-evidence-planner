@@ -388,7 +388,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 - CTO skip level with Meetesh Karia: Delivered updated status (34/43 = 79%), 5 audit risks including new items on log retention and access provisioning sample risk.
 - **Gaige Rogers bulk delivery (IT-21925):** Processed 4 zip files containing evidence for 9 ESEC tickets:
   - ESEC-167 (LS.01 G-Suite password): Google password policy screenshot — uploaded and closed
-  - ESEC-196 (LS.13 email security): Oct/Dec summaries empty due to 180-day retention gap; Jun 2026 has data. Safety configs, compliance configs, alert sample — uploaded
+  - ESEC-196 (LS.13 email security): Oct/Dec summaries empty due to Google's 6-month retention (Session 8 cited the published schedule; "180 days" was an approximation); Jun 2026 has data. Safety configs, compliance configs, alert sample — uploaded
   - ESEC-197 (LS.13 Gmail safety settings): Uploaded and closed
   - ESEC-199 (LS.13 email notification): Uploaded and closed
   - ESEC-207 (LS.16 asset disposal parent): Archived assets CSV (562 rows), Use of Services letter, Certificate of Destruction (COD #10905)
@@ -397,7 +397,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
   - ESEC-210 (LS.16 data destruction cert): Uploaded and closed
   - ESEC-221 (CO.04 wireless security): UniFi firewall rules (2) + WPA configs for Oakland + SLC (4 screenshots) — uploaded and closed
   - Note: ESEC-222 (CO.04 UniFi notification/alert settings) NOT included in delivery — still outstanding
-- **LS.13 email security pushback:** Wrote formal pushback argument in justification doc against Baker Tilly demanding sample-month email security summaries. Platform-enforced vendor control — Google scans all email by default, no customer opt-out. Configuration proves design, Google's SOC 2 covers operation. Historical log retention (~180 days) means Oct/Dec 2025 data doesn't exist and never will. Documented in ESEC-278.
+- **LS.13 email security pushback:** Wrote formal pushback argument in justification doc against Baker Tilly demanding sample-month email security summaries. Platform-enforced vendor control — Google scans all email by default, no customer opt-out. Configuration proves design, Google's SOC 2 covers operation. Historical log retention (6 months per Google's published schedule) means Oct/Dec 2025 Google data doesn't exist and never will. Session 8 narrowed this: Cloudflare Area 1 sits upstream of Google and may hold those months. Documented in ESEC-278.
 - **User entitlements (IT-21925):** 7 onboarding, 4 offboarding, 1 transfer screenshots extracted — staged for ESEC-170 (LS.02) and ESEC-200 (LS.14)
 
 ### Status as of September 11, 2026 (end of session 7)
@@ -413,7 +413,7 @@ Pulled from "Date Selections" tab — these determine which samples/months the a
 
 ### September 14, 2026 (Session 8 — self-audit and correction pass)
 
-A review of what had already been submitted, rather than new collection. Found and fixed four
+A review of what had already been submitted, rather than new collection. Found and fixed five
 defects in evidence already in the auditor's hands. Everything was disclosed in the justification
 doc rather than quietly amended.
 
@@ -459,6 +459,32 @@ internal; all 30 days present).
 
 **4. ESEC-182/184 reopened.** Both had been closed while the remediation samples they ask for still
 await Baker Tilly's sample selection. Reopened to To Do with the 30-item inventory staged.
+
+**5. LS.13 — the mail gateway was misattributed, and the LS.13 evidence covers only half the
+inbound path.** `email_security_dns_records.txt` (ESEC-198, submitted 9/8) recorded
+"Gateway/Scanning: mxrecord.io (Valimail/email security vendor)". Verified with `dig` and `whois`:
+`mxrecord.io` has Registrant Organization **Area 1 Security**, registrar Cloudflare, Inc., and both
+`mailstream-east/west.mxrecord.io` resolve into CLOUDFLARENET (172.65.213.128 / 172.65.220.210).
+Area 1 was acquired by Cloudflare in Feb 2022. Valimail *is* in the stack — `vali.email` is the SPF
+macro-include target and the DMARC `rua` destination — but it is not the gateway. Two vendors, two
+functions, conflated in one label.
+- **Consequence 1, coverage:** all inbound mail transits Cloudflare Area 1 *before* Google. Req
+  96/97/98 evidence the Google layer only. No Area 1 config, policy, admin listing or detection
+  output has been filed. Being compiled.
+- **Consequence 2, the retention argument was too broad.** The comments already posted to
+  ESEC-196/197 asserted Oct/Dec 2025 "cannot be produced." True of Google's logs; possibly false of
+  Earnest's mail path, because Area 1 retains detection telemetry on its own schedule. Posted a
+  supplementing comment narrowing the claim rather than leaving it standing. **If Area 1 covers
+  those months the sample request is answerable, not deniable.**
+- **Consequence 3, a point for the control:** inbound mail had two independent scanning engines all
+  period, and the MX records proving it are verifiable by the auditor from public DNS without
+  Earnest credentials or anyone's retained logs.
+- Corrected DNS file rewritten with the two-layer stack, the `whois`/`dig` output as attribution
+  basis, and inline IPE; uploaded to ESEC-198 replacing the original.
+- Recorded separately that Earnest is in active procurement with **Material Security** and
+  **Abnormal Security** to replace Gmail + Area 1 — explicitly *not complete, not in production,
+  not affecting the audit period*, framed as a planned enhancement to an operating control rather
+  than a response to a failure.
 
 **Also done:**
 - Scrubbed a live PagerDuty integration key from submitted evidence.
@@ -570,4 +596,22 @@ await Baker Tilly's sample selection. Reopened to To Do with the 30-item invento
     deletion with a live byte-size check on the keeper, and post a dated provenance comment for
     anything removed or moved — an attachment that vanishes from an audit ticket with no explanation
     is worse than the duplicate was.
-36. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+36. **Verify who the vendor actually is before naming one in evidence.** `email_security_dns_records.txt`
+    named Valimail as the inbound mail gateway for a year. `whois mxrecord.io` says Area 1 Security /
+    Cloudflare in one command. Every vendor named in an evidence artifact should be traceable to a
+    query the auditor could run themselves — WHOIS, a DNS record, a console screenshot — not to
+    inference from an adjacent record. Two vendors appearing in the same DNS zone are not the same
+    vendor, and "email security vendor" is not an attribution.
+37. **Map the whole control path before writing an unobtainability argument.** The LS.13 retention
+    argument was technically correct and still too broad, because it assumed one scanning layer where
+    there are two. Before telling an auditor something cannot be produced, enumerate every system in
+    the path and check each one's retention independently. A "cannot be produced" claim that a second
+    data source contradicts is far more damaging than the original gap — and here the second source
+    may turn a denial into an answer.
+38. **Attribute vendor limitations to the vendor's own published statement, with the URL.** Google's
+    retention page states "Administrators cannot delete log event data or change the length of time
+    that the data is available for." Quoting that verbatim with the URL and the page's last-updated
+    date converts "we didn't keep it" into "no customer of this platform can keep it," which the
+    auditor can verify without trusting us. Do the rolling-window arithmetic explicitly, and state
+    when the *current* evidence will age out too.
+39. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
