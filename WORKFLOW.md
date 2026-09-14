@@ -653,6 +653,30 @@ weren't there — shared collector dumps copied per-request, each naming nine ar
 holding one or two, complete with `Row Count: 0 / repos scanned: 0` stanzas. `CM.08 Req 36`'s 289-row
 entitlement CSV was undocumented entirely. Rewrote all four as per-request IPEs. See lesson 45.
 
+### September 14, 2026 (Session 8, continued — the IT.11 backup population actually covers the period)
+
+My closing note said "restore testing jobs start 2025-12-31, so Oct–Dec 2025 has no restore jobs."
+Adam read it as a claim about backups: *"So we dont have evidence from Oct and dec 2025 for backups?
+Check again. Change to the production account."* Two separate populations, and my sentence had put them
+together. Re-checked against live prod (075440130607, `AWSReservedSSO_Engineering-Prod`).
+
+Backups from Oct and Dec 2025 exist and are still in the account. `list-recovery-points-by-backup-vault`
+across both vaults returns 210 recovery points, every one COMPLETED, 186 of them inside the audit
+period, covering all 12 months — two per production database per month, one to `Default` via
+`RDS-Monthly-1yr-Retention` and one to `RDS-Backup-Alert-Vault-Prod` via `RDS-Backup-Alert-Plan-Prod`,
+both `cron(0 5 1 * ? *)`, both cold-storage-at-30 / delete-at-365. In the months where the Quarterly or
+Yearly rule fires on the same date, AWS attributes the point to the longer-retention rule, so the rule
+mix shifts month to month while the count per database per month stays at two — worth stating in the
+summary, because otherwise the rule-attribution table looks like the monthly rule skipped Oct 2025.
+
+The real weakness was the staged population itself. `rds_automated_snapshots.csv` (230 rows, pulled
+2026-09-01) is a 7–31 day retention window and can only ever show the last month. `list-backup-jobs`
+has the same problem from the other side — its oldest record in the account is 2026-08-31. Delivered
+`aws_backup_recovery_points.csv` (210 rows, plan/rule/retention/KMS key per row) and
+`backup_monthly_coverage_summary.txt` (by month, by database, by rule) to ESEC-264, rewrote the Req 212
+IPE to say which file carries period coverage and which is a point-in-time window, and gave Req 212 a
+population and justification paragraph in the justification doc. See lessons 47 and 48.
+
 One tooling gap closed on the way: `reupload_cleaned.py` uploads whatever is in the tree, which is
 wrong for rows where the tree holds a rendered PDF and the ticket deliberately holds the `.md`. It
 would have pushed the PDF and deleted the source. `reupload_sources.py` routes by `source_markdown`
@@ -847,3 +871,22 @@ language sweep clean — remaining hits are CVE descriptions and PR titles.
     files are not 23 equal decisions. And read the screenshots before writing their IPE: every fact in
     the restore-testing IPE (plan ARN, `cron(0 5 2 * ? *)`, 60-day window, 57 jobs, 2025-12-31 start)
     came off the captures, and the one claim not made was a row-by-row reconciliation nobody performed.
+
+47. **A population pulled from a retention window can only ever show that window — check whether the
+    system keeps something that outlives it.** IT.11's staged population was
+    `rds_automated_snapshots.csv`, pulled 2026-09-01 against instances whose automated-snapshot
+    retention is 7–31 days. It structurally could not show a backup taken in October or December 2025,
+    and nothing in the file says so — the row count (230) reads like coverage. The same account holds
+    AWS Backup recovery points on two plans retaining 365 days or longer, and those vaults still had
+    every monthly point back to Oct 2025: 210 points, all COMPLETED, 186 inside the audit period, two
+    per production database per month. Note the asymmetry that made this findable — AWS Backup's *job
+    history* API had nothing before 2026-08-31 either, so `list-backup-jobs` reproduces the same
+    illusion; only `list-recovery-points-by-backup-vault` reaches back. Before delivering any listing
+    as period coverage, ask what deletes rows from it and on what clock, and if the answer is shorter
+    than the audit period, go find the artifact that is retained longer. Then say in the IPE which file
+    carries period coverage and which is a point-in-time window, so the reader is not left to infer it.
+
+48. **Restore *testing* starting mid-period is not backups starting mid-period.** I reported "restore
+    testing jobs start 2025-12-31, so Oct–Dec 2025 has no restore jobs" and it was heard as a gap in
+    backups. Two different controls, two different populations, and the conflation was mine for
+    putting them in one sentence. When a date bounds one assertion, name the assertion it bounds.

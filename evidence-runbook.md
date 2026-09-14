@@ -730,6 +730,41 @@ is why the queries cover more endpoints than either file uses on its own."*
 An IPE for a request whose deliverable *is* the IPE (`Req 38 - IPE - Code Developers List`) names the
 file it documents and says which folder holds it.
 
+### A retention-window listing is not period coverage (added 2026-09-14)
+
+Before delivering any listing as evidence that a control operated across the audit period, ask what
+deletes rows from it and on what clock. If the answer is shorter than the period, the file cannot show
+the early months no matter how many rows it has — and nothing in the file says so, which is the whole
+problem. A 230-row snapshot listing reads like coverage.
+
+IT.11 shipped `rds_automated_snapshots.csv`, pulled 2026-09-01 from
+`describe-db-snapshots --snapshot-type automated`, against instances whose retention is 7–31 days. It
+could not show a backup taken in October 2025. The same account held AWS Backup recovery points on
+plans retaining 365 days, and the vaults still had every monthly point back to Oct 2025: 210 points,
+all COMPLETED, 186 in period, all 12 months covered.
+
+Note that the obvious second call has the same defect — `list-backup-jobs` keeps only a short job
+history (oldest record in prod was two weeks old), so it reproduces the same illusion. The artifact
+that survives is the one the retention policy is *long* on.
+
+Then say it in the IPE. Name which file carries period coverage and which is a point-in-time window,
+in a sentence, so the reader is not left to work it out from a collection timestamp:
+
+> RDS deletes automated snapshots at the end of the retention window, so this listing is the snapshots
+> inside the window on 2026-09-01. Period coverage for the control comes from
+> `aws_backup_recovery_points.csv`, whose points are retained 365 days or longer by plan configuration.
+
+Generalizes past backups: log searches bounded by index retention, endpoint telemetry, SaaS audit
+logs with 90-day windows, Google Workspace's 6-month rolling limit. Same question every time.
+
+### Keep the population you are bounding straight (added 2026-09-14)
+
+"Restore testing jobs start 2025-12-31, so Oct–Dec 2025 has no restore jobs" was read as a gap in
+*backups*. Backup existence and restore testing are two controls with two populations; one sentence
+holding both invites the reader to apply the date to whichever they were thinking about. When a date
+bounds one assertion, name the assertion it bounds — in internal notes as much as in the deliverable,
+because the internal note is what the decision gets made on.
+
 ### Mine the folders people hand you (added 2026-09-14)
 
 A stakeholder's ad-hoc download folder is not a duplicate of the submission. Of 32 files in one
@@ -1065,7 +1100,20 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
   - ELBv2: `describe-load-balancers`, `describe-listeners`
   - CloudFront: `list-distributions` (returns empty if none exist — not an error)
   - EventBridge: `list-rules`, `list-targets-by-rule`
-  - Backup: `list-backup-plans`, `list-backup-vaults`, `get-backup-vault-notifications`
+  - Backup: `list-backup-plans`, `get-backup-plan`, `list-backup-vaults`, `get-backup-vault-notifications`
+  - Backup population for a period: `list-recovery-points-by-backup-vault --backup-vault-name <vault>`.
+    This is the only AWS Backup call that reaches back across an audit period. `list-backup-jobs` keeps
+    a short history (in prod, nothing older than ~2 weeks), and `describe-db-snapshots --snapshot-type
+    automated` only shows the 7–31 day RDS retention window. Recovery points persist for the plan's
+    retention (365 days on both prod monthly plans) and each one carries `CreatedBy` plan/rule id,
+    `CreationDate`, `CompletionDate`, `Status`, `Lifecycle`, and the KMS key.
+  - Prod backup plans (as of 2026-09-14): `RDS-Monthly-1yr-Retention` → `Default` vault, rule Monthly
+    `cron(0 5 1 * ? *)`, cold at 30 / delete at 365. `RDS-Backup-Alert-Plan-Prod` →
+    `RDS-Backup-Alert-Vault-Prod`, rules Monthly (same schedule and lifecycle), Quarterly
+    `cron(0 5 1 1,4,7,10 ? *)` and Yearly `cron(0 5 1 1 ? *)`, both with no expiration. Also a
+    `test123` plan. When Quarterly or Yearly fires on the same date as Monthly, AWS attributes the
+    recovery point to the longer-retention rule, so per-rule counts move month to month while the
+    per-database count stays at two.
 
 ---
 
