@@ -659,6 +659,25 @@ Assignment Maps list, so the honest close was stronger than the scoping argument
 Disclose the difference in evidence form ("evidenced from the profile side only, screenshots
 available on request") and let the control pass on its merits.
 
+#### A filtered population needs the filter in the IPE (fixed 2026-09-14)
+
+The Iru IPE on ESEC-229 said both `Filters applied: Model Name contains "MacBook"` and
+`Completeness: ... no pagination or filtering applied`. Two adjacent lines contradicting each other,
+in the one artifact type an auditor tests hardest. The second was boilerplate carried over from an
+unfiltered export.
+
+A filter *was* applied and it is the right filter — CO.08 is about laptops, so the population is the
+Mac fleet, not every enrolled device. The fix was to state that affirmatively: the filter, the row
+count, the six blueprints and their counts, confirmation the CSV export is not paginated, and the
+reconciliation explaining why a blueprint header reads 302 against 289 MacBooks (13 non-Mac devices
+in that blueprint). Re-uploaded to ESEC-229 (att 231741, superseding 231069).
+
+**The rule: "no filtering applied" is a claim, not boilerplate — delete it unless it's true.** A
+scoped population is fine and often correct; an IPE that misdescribes its own scope is not, because
+it invites the auditor to distrust every other IPE in the submission. If a filter exists, name it and
+justify it against the control's wording, and reconcile any count the auditor can see in the console
+against the count in the file.
+
 ---
 
 ## Evidence Hygiene and Self-Correction
@@ -898,6 +917,10 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
   9/14 by returning ESEC-1..100 when the audit tickets live at ESEC-139..280.
 - **Rename an issue:** `PUT /rest/api/3/issue/{key}` with `{"fields": {"summary": "..."}}`
 - **Attachment delete:** `DELETE /rest/api/3/attachment/{id}` — returns empty body, so read it raw
+- ⚠️ **Attachment ids come back as strings, not ints.** `if OLD_ID in {a[0] for a in attachments}`
+  is silently False when `OLD_ID` is written as a bare int literal, so the upload-then-delete guard
+  fails open: the replacement uploads, the superseded copy is never removed, and the ticket ends up
+  with two versions of the same file. Coerce both sides with `str()`. Caught on ESEC-229 9/14.
 - ⚠️ Comment bodies are **ADF** — a plain string is rejected. Reading requires flattening ADF back
   to text (`content[].content[].text`).
 - **Rate limit:** ~100 req/60s, scripts use 90 req/60s window

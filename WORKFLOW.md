@@ -558,6 +558,8 @@ checkable both ways — a PDF is a rendering of evidence, not new evidence. Stag
 after the change: 334 files, 313 manifest rows, 88.2 MB, 0 hash mismatches, 0 `.md` remaining.
 Renderer notes and the five layout defects that had to be fixed are in the runbook. See lesson 41.
 
+**Pre-upload pre-flight on the rendered PDFs found one real defect — in a `.txt`, not a PDF.** Extracted the text of all 29 renders and grepped for unrendered Markdown (literal `**`, `#` headings, table pipes) and thin pages. Every PDF hit was a false positive: `#` was a row-number column header, the pipes were Mermaid source in a fenced block (the visual diagram ships as a PNG alongside) or a `|`-separated metadata line, and the emoji in the pasted Jira checklists render in colour. The defect the sweep surfaced instead was the Iru IPE on ESEC-229 asserting both a MacBook filter and "no pagination or filtering applied." Rewrote it to state the filter, justify it against the control's wording, and carry the 302-vs-289 reconciliation; re-uploaded as att 231741 superseding 231069. Also caught that Jira returns attachment ids as strings, so an int `OLD_ID` made the upload-then-delete guard fail open and leave both copies on the ticket — the guard needs `str()` on both sides. Final tree: 334 files, 313 manifest rows, 88.2 MB, 0 hash mismatches.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
