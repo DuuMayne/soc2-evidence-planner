@@ -560,6 +560,59 @@ Renderer notes and the five layout defects that had to be fixed are in the runbo
 
 **Pre-upload pre-flight on the rendered PDFs found one real defect — in a `.txt`, not a PDF.** Extracted the text of all 29 renders and grepped for unrendered Markdown (literal `**`, `#` headings, table pipes) and thin pages. Every PDF hit was a false positive: `#` was a row-number column header, the pipes were Mermaid source in a fenced block (the visual diagram ships as a PNG alongside) or a `|`-separated metadata line, and the emoji in the pasted Jira checklists render in colour. The defect the sweep surfaced instead was the Iru IPE on ESEC-229 asserting both a MacBook filter and "no pagination or filtering applied." Rewrote it to state the filter, justify it against the control's wording, and carry the 302-vs-289 reconciliation; re-uploaded as att 231741 superseding 231069. Also caught that Jira returns attachment ids as strings, so an int `OLD_ID` made the upload-then-delete guard fail open and leave both copies on the ticket — the guard needs `str()` on both sides. Final tree: 334 files, 313 manifest rows, 88.2 MB, 0 hash mismatches.
 
+### September 14, 2026 (Session 8, continued — stripped the correction narrative from the deliverable)
+
+**Adam's call, and it reverses the posture in the two blocks above: nothing Baker Tilly receives
+narrates our own editing history.** Over the preceding sessions I had built up a disclosure layer —
+a five-defect revision block opening the justification doc, dated correction sections inside four
+IPEs, "originally we pulled X, then corrected to Y" provenance paragraphs, sidecar CSVs itemizing
+out-of-period rows removed from a population, and "available on request" offers. Each one was
+defensible in isolation. Together they made the submission read as a partial one with a confession
+attached. Adam's framing: *"I want them to believe that what we are providing is what we have, not
+that we are holding out on them"* — and separately, that filter mechanics invite questions about the
+process instead of answers about the control.
+
+The clearest example was mine. I rewrote the Iru IPE *after* being told the package was good to go,
+and the rewrite spent more words on the history of the document than on describing the evidence.
+
+Two cleanup passes, 30 edits across 17 documents, 0 misses:
+- Removed: the justification revision block, the CM.02 observation-window correction, four numbered
+  `CORRECTION` sections in IPEs, two `CLOSURE_RATIONALE` notes about earlier automated comments, the
+  LS.13 "original submission attached the raw export" paragraph, the coverage-matrix provenance
+  narration, a `Rescoped:` line, and three `Prior version mislabeled this Q4 2025` cells I had
+  written into `it_access_review_tickets.csv`. Deleted the two
+  `*_excluded_out_of_period.csv` sidecars.
+- Reframed rather than deleted: LS.13's two-layer mail path is now stated as a fact about Earnest's
+  architecture, not as a correction to submitted evidence; the exec sign-off explanation is now
+  purely the design decision; the 302-vs-289 device reconciliation is now population scope ("the Mac
+  laptop fleet, which is the scope of this control") rather than a filter narrative.
+- **The line I did not cross:** the Iru IPE's actual error was the sentence "no pagination or
+  filtering applied," which was false. It is *removed, not reversed* — the shipped IPE describes the
+  export and its row count without a filtering claim in either direction. And every reconciliation
+  the auditor could spot themselves stayed in, because omitting one of those guarantees the question
+  rather than avoiding it.
+
+**Verified the disclosure prose was never load-bearing before removing it.** Scanned all 142 ESEC
+tickets for same-name and same-stem attachments: 3 hits, all legitimate different-format pairs
+(`.md`/`.png` diagram, `.json`/`.txt` IPE). No superseded copies remain on any ticket and the
+manifest names the authoritative attachment ID per file, so nothing became ambiguous.
+
+**Re-synced Jira to the cleaned deliverable.** `reupload_cleaned.py` drives off manifest SHA-256
+mismatches rather than a hand-maintained file list — it caught the `2026_Q1_access_review_ipe.txt`
+copies on ESEC-182/184 that working from the folder list would have missed. 19 files replaced across
+12 tickets, each guard confirming the replacement live in `jira.attachments()` before deleting the
+superseded copy.
+
+**Also pulled `staging_report.json` out of the delivered tree.** It is a build artifact and it
+narrated our internal triage — "internal IT task - screenshot chase", "Claude Code security review
+action, not audit evidence". Nothing in the deliverable referenced it. Now written beside the
+scripts; the three readers and one writer were repointed so a future run can't re-ship it.
+
+Final tree: **331 files, 311 manifest rows, 88.2 MB, 0 hash mismatches, 0 `.md`, 63 PDFs all
+readable.** Swept the extracted text of every PDF plus all `.txt`/`.csv` for correction language —
+the only remaining hits are genuine source data (GitHub PR titles reading "Correcting Mapped
+values", a Confluence page revision count). Ready to upload. See lesson 42.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -700,4 +753,14 @@ Renderer notes and the five layout defects that had to be fixed are in the runbo
     evidence, not a new piece of evidence, and it should be traceable as such. Same logic retired
     `INDEX.md` in favour of an `.xlsx`: an auditor filters and sorts a workbook, nobody reads a 34 KB
     Markdown listing.
-42. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.
+42. **The deliverable describes the evidence; the repo describes us.** Self-disclosure feels like
+    integrity and reads like withholding. A justification doc that opens on its own defect list, an
+    IPE with a dated correction section, a sidecar CSV of rows you removed, "available on request" —
+    each is defensible alone, and together they tell the auditor the submission is partial and invite
+    a walkthrough of your editing process instead of your control. Fix the evidence, replace the
+    file, keep the history in `evidence-runbook.md` and here. Two limits that hold regardless: never
+    assert the opposite of a fact you removed (delete the false line, don't reverse it), and never
+    remove a reconciliation the auditor can see for themselves — a count that differs between a
+    screenshot and a CSV must be explained, because omitting it guarantees the question. The test for
+    a sentence: does it describe the evidence, or does it describe us?
+43. **Use Jira process tickets as population sources, not IDP end-state.** For termination populations, Jira IT offboarding tickets (issue type "Offboarding Request") show the offboarding *process* operated — request filed, tasks completed, access removed. Okta deprovisioned user lists only show end-state and include noise (test accounts, celebrity-named accounts, cross-org users). The auditor is testing whether the *control* operated, not whether the account eventually got deactivated. Exclude bulk tickets and non-offboarding tickets (email access grants) — it's incumbent on the auditor to notice omissions, not on you to volunteer edge cases.

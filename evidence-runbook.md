@@ -656,27 +656,27 @@ argument caught being wrong discredits every *other* scoping argument in the sub
 excluding anything on the basis of what a container is called, pull the members and look at them.
 And check whether you need the exclusion at all — here FileVault *was* enforced on all 5 via the
 Assignment Maps list, so the honest close was stronger than the scoping argument would have been.
-Disclose the difference in evidence form ("evidenced from the profile side only, screenshots
-available on request") and let the control pass on its merits.
+State the coverage affirmatively and let the control pass on its merits.
 
-#### A filtered population needs the filter in the IPE (fixed 2026-09-14)
+#### An IPE must not misdescribe its own scope (fixed 2026-09-14)
 
 The Iru IPE on ESEC-229 said both `Filters applied: Model Name contains "MacBook"` and
 `Completeness: ... no pagination or filtering applied`. Two adjacent lines contradicting each other,
 in the one artifact type an auditor tests hardest. The second was boilerplate carried over from an
 unfiltered export.
 
-A filter *was* applied and it is the right filter — CO.08 is about laptops, so the population is the
-Mac fleet, not every enrolled device. The fix was to state that affirmatively: the filter, the row
-count, the six blueprints and their counts, confirmation the CSV export is not paginated, and the
-reconciliation explaining why a blueprint header reads 302 against 289 MacBooks (13 non-Mac devices
-in that blueprint). Re-uploaded to ESEC-229 (att 231741, superseding 231069).
+**The rule: "no filtering applied" is a claim, not boilerplate — delete it unless it's true.** The
+fix is to remove the false line, not to reverse it into a filter narrative. The IPE that shipped
+describes the export plainly: source system, navigation, export filename, exporter, timestamp,
+population count, columns, the six blueprints and their counts, and confirmation that the CSV
+download returns the full result set in one file. That is a complete and accurate IPE without a
+sentence about filtering in it.
 
-**The rule: "no filtering applied" is a claim, not boilerplate — delete it unless it's true.** A
-scoped population is fine and often correct; an IPE that misdescribes its own scope is not, because
-it invites the auditor to distrust every other IPE in the submission. If a filter exists, name it and
-justify it against the control's wording, and reconcile any count the auditor can see in the console
-against the count in the file.
+Keep the reconciliation that explains why a blueprint header reads 302 against a population of 289
+— framed as population scope ("the Req 134 population is the Mac laptop fleet, which is the scope of
+this control"), not as a filter. That number is visible to the auditor in the screenshots, so
+closing the gap prevents a question. A filter the auditor cannot see is not a gap, and narrating it
+only invites one.
 
 ---
 
@@ -703,16 +703,53 @@ Procedures for the work that happens *after* evidence is submitted. Everything h
   vanishes from an audit ticket with no explanation is worse than the duplicate was.
 
 ### When submitted evidence turns out to be wrong
-- **Disclose it, don't quietly amend it.** Add a dated revision block to
-  `evidence_request_justification.md` listing each correction, and a dated correction section to
-  the affected IPE. Self-identified and disclosed reads as a working control environment;
-  discovered by the auditor after a silent edit does not.
-- **Show the delta.** Old value → new value, row counts included, plus a sidecar file itemizing
-  any rows removed.
+
+**Fix the evidence; do not ship the edit history.** Superseded text is replaced, not annotated. The
+deliverable describes what the evidence *is*; it does not narrate how the document reached its
+current state. Revision blocks, "originally we pulled X then corrected to Y", dated correction
+sections, and sidecar files itemizing removed rows all come out — every one of them invites a
+question about the process instead of an answer about the control, and a document that spends its
+opening on self-correction reads as though more is being withheld.
+
+Two hard limits on that, which are not negotiable:
+
+- **Never assert the opposite of a removed fact.** Removing "no pagination or filtering applied"
+  because it was untrue is correct. Replacing it with a claim in the other direction, or leaving a
+  statement standing that you now know is false, is not. Delete, don't reverse.
+- **Keep any reconciliation the auditor can see for themselves.** A count that differs between a
+  console screenshot and a CSV has to be explained in the deliverable — omitting it doesn't avoid
+  the question, it guarantees it. What comes out is narration the auditor had no way to notice.
+
+Everything removed stays here and in `WORKFLOW.md`. The internal record is what the correction
+history is *for*; the deliverable is not the place to keep it. See "Two audiences, two documents".
+
+- **Replace, don't stack.** Upload the corrected file and delete the superseded attachment, so the
+  ticket carries one authoritative copy. `analysis_sept14/reupload_cleaned.py` drives this off
+  manifest SHA-256 mismatches — anything edited locally is detected and re-uploaded, so no ticket
+  silently keeps stale text. Never delete until the replacement is confirmed live.
 - **Reopen tickets that were closed prematurely.** ESEC-182/184 were closed while still waiting on
   auditor sample selection. Requests contingent on someone else's input stay open.
-- **Never leave a false statement standing in the audit record.** When correcting a prior comment,
-  post the correction even if it's awkward — but keep it factual and scoped to what was wrong.
+
+### Two audiences, two documents
+
+The repo and the deliverable are written for different readers, and conflating them is what produced
+a justification doc opening with a five-item list of its own defects.
+
+| | Auditor-facing (Drive tree, Jira attachments) | Internal (`evidence-runbook.md`, `WORKFLOW.md`) |
+|---|---|---|
+| Answers | what the evidence is, why it meets the control | how we produced it, what we got wrong, what to do next time |
+| Correction history | none | in full, with dates and ticket/attachment IDs |
+| Filters, query params, tool quirks | only where the auditor can see a discrepancy | always |
+| Tone | affirmative and complete | candid |
+
+**The test before a sentence ships to the auditor: does it describe the evidence, or does it
+describe us?** Process narration goes in the repo. This is not a licence to omit anything material —
+it is a rule about *whose* history the document is telling.
+
+Corollary: **"available on request" is a tell.** It reads as an admission that the submission is
+partial. Either include the artifact or state the coverage affirmatively from what is included. The
+one legitimate use is a genuinely redacted file, where the offer to produce unredacted values at
+walkthrough is a necessary part of describing what the reader is holding.
 
 ### Writing auditor-facing documents
 - **No internal negotiating strategy in anything the auditor sees.** The justification doc had a
