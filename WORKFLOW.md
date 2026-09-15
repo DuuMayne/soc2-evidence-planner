@@ -921,6 +921,95 @@ recursive `grep` across the Drive mount — it forces Drive to hydrate every fil
 
 ---
 
+### September 15, 2026 (Session 10 — worked the re-pull ranking; items 1, 2 and 3 closed)
+
+**Tickets touched:** ESEC-142, 143, 144, 145, 146, 147, 148, 212, 278 (plus the vulnerability packet)
+
+Took the ranked re-pull list from Session 9 top-down rather than proposing all 91 CSVs.
+
+**Item 1 — vulnerability packet.** The two files whose row counts were API page caps (2,000 open,
+50+50 by month) now say what they are: extracts in the platform's own return order, each named with
+the population it came from, exact figures re-pulled from `meta.pagination.total` on `limit=1`
+queries rather than counted off a truncated page, full month offered. The IPE's internal
+contradiction — 400 in the text against a 2,000-row file — is gone. Counts CSV stayed internal.
+
+**Item 2 — my ranking was wrong, and finding that out was the deliverable.** I had called the
+CrowdStrike population's 2026-06-18 floor a detection-retention boundary that the migration-maturity
+framing didn't explain. Falcon carries two date fields that answer opposite questions:
+`created_timestamp` (first raised, never rewritten) and `timestamp` (event time, **refreshed** on
+container posture findings, because posture reports present state). Filter retention on `timestamp`
+and the whole tenant reads ~90 days old — including 2.88M container findings that plainly did not
+all occur in one week. Filter on `created_timestamp` and the oldest record is a posture finding
+first raised 2025-12-08 whose `timestamp` reads 2026-07-03, later than its own creation. Retention
+reaches ~6 months further back than the activity population begins, so retention cannot be what
+sets that start date; activity alerts first raised before 2026-06-01 = **0**. Onboarding, not
+aging-out. The fix was capturing the proof (`prove_crowdstrike_retention.py` → ESEC-212), not a
+re-pull. **Retention and capability-start look identical unless you ask whether records of *any*
+type predate the boundary.**
+
+**Item 3 — the six CM.02 change populations. Retaining the raw is what found everything else.**
+All six IPEs stated the path as GitHub API → gh CLI → JSON → CSV. The JSON step was real but had
+never been kept, so the CSV was the earliest artifact anyone could inspect. Re-pulling that
+intermediate through the same `gh` account the IPEs name (`pull_change_population_raw.py`) cost one
+script and surfaced four defects reading the CSVs could not:
+
+1. **Servicing was short ten changes inside its own stated scope.** Its IPE claimed 14 repositories
+   and named 13; querying every repository on the mapping workbook's Servicing sheet found
+   `feed-ingestor` (9) and `nd-validations` (1) had never been queried. Reissued at 515. MMAX had
+   the same shape (18 named, "+ others", 21 claimed); its missing three are unrecoverable from any
+   script, so after sweeping 759 org repositories on adjacent naming families and confirming all
+   five candidates out of scope, its IPE names the 18 actually queried and drops the 21.
+2. **Three stated end dates for one control and one period** — 2026-09-04, 2026-08-31, and
+   2026-09-30 on a population collected before that date. Proved by re-pull that a single window
+   reproduces all six delivered counts exactly *before* rewriting anything, so the three reconcile
+   to one without moving a row.
+3. **Two files named `*_excluded_out_of_period.csv` held 15 changes merged Sept 1–4, 2026** — inside
+   a period running to September 30. The label asserted we had excluded in-period changes. Renamed
+   to the explicit date range with a note stating both boundaries, and staged and manifested for the
+   first time; they had existed only as Jira attachments.
+4. **`reviewDecision` is current state, not an approval record — and would have manufactured 98
+   exceptions.** It reverts to `REVIEW_REQUIRED` the moment a commit lands after an approval and
+   stays there after merge, and is null where the base branch has no required-review rule. At face
+   value 98 of 1,462 merged PRs read as something other than approved. Pulling the actual review
+   history (`resolve_review_decisions.py`) showed **97 of 101 had an `APPROVED` review from someone
+   other than the author at or before `mergedAt`**. Request 27 asks for a population, so the field
+   isn't carried; approval is tested at each PR URL where the real history lives. The four genuine
+   ones are held internally with merge actor and event history — three Copilot agent PRs each merged
+   by a named engineer, one human PR whose ten review events were recorded as `COMMENTED`.
+
+Also normalised all six to one schema (Files.com had its own, with a `Review Decision` column),
+stated the row order, restored full titles from ~80-character truncation, and corrected a
+consolidated total of **1,441 that was arithmetically wrong on its own terms** — it summed five
+populations and silently dropped Files.com's 11 — to 1,462 rows / 1,311 unique, the gap being two
+repositories that each serve two products, stated so the six aren't read as additive. Every IPE is
+generated from the JSON beside it (`generate_change_population_ipes.py`), so a count cannot drift
+from its evidence.
+
+**Two process errors of mine, both caught by assertion rather than by reading.** A single-attempt
+pull took HTTP 502 on the three busiest repos and recorded them as zero, dropping SchoolHub to 64 of
+204 and Servicing to 219 of 515 — nothing in the output says "truncated"; the population just comes
+out small and plausible, which is the dangerous kind. Non-zero exit is now fatal and a genuinely
+quiet repo is recorded as an explicit zero, so "no changes" and "the call failed" can't look alike.
+And a trailing blank line had made Files.com read as 12 rows against a stated 11, which is where an
+earlier misread of mine originated; every population script now asserts `lines == records + 1` and
+stops. Related: `b.count(b'\n')` in a single-quoted Python string counts backslash-n, not newlines.
+
+**Also corrected in my own earlier finding:** I had written that the repo-to-system mapping "appears
+nowhere." It doesn't — the IPEs named both the repositories and the mapping workbook. What was
+actually missing was the retained JSON and the completeness of the repository lists.
+
+**Published:** 18 files across the six population tickets, plus the consolidated IPE (ESEC-148) and
+the justification doc (ESEC-278). 14 superseded attachments deleted only after each replacement was
+confirmed live at expected size. Final tree: 351 files, 351 manifest rows, 68 requests, 35 controls,
+every manifest row backed by a file on disk.
+
+**Still on the list:** item 4 (`it_offboarding_population.csv`, blocked on HR for the Workday raw
+termination export) and item 5 (`new_modified_access_population.csv`, wants raw Jira JSON plus the
+JQL). Then the four judgment-column files. After 9/30, the September 2026 change supplement for all
+six populations, which the IPEs now commit to.
+
+---
+
 ## For Next Year
 
 1. Build proper collectors for each evidence type — automate the full pull-to-upload pipeline

@@ -461,26 +461,47 @@ Each entry follows this structure:
      `min(merged_date) >= WINDOW_START`, per population. Fail loudly, don't warn.
   6. Write per-product CSV
 - **Output directory:** `evidence/github/`
-- **Output files (corrected 2026-09-14):**
-  - `slo_platform_change_population.csv` — 376 PRs
-  - `schoolhub_spoke_change_population.csv` — 204 PRs
-  - `cashi_change_population.csv` — 140 PRs
-  - `mmax_change_population.csv` — 216 PRs
-  - `servicing_platform_change_population.csv` — 505 PRs
-  - `file_transfer_service_change_population.csv` — 11 PRs
-  - Consolidated total: **1,441** merged PRs
+- **Output files (reissued 2026-09-15 from `pull_change_population_raw.py`, one schema across all six,
+  with `<population>_raw.json` retained beside each):**
+  - `slo_platform_change_population.csv` — 376 PRs (22 repos, 15 with changes)
+  - `schoolhub_spoke_change_population.csv` — 204 PRs (6 repos, 4 with changes)
+  - `cashi_change_population.csv` — 140 PRs (1 repo)
+  - `mmax_change_population.csv` — 216 PRs (18 repos, all with changes)
+  - `servicing_platform_change_population.csv` — 515 PRs (17 repos, 14 with changes)
+  - `file_transfer_service_change_population.csv` — 11 PRs (1 repo)
+  - Consolidated total: **1,462** rows / **1,311** unique merged PRs — the gap is the two
+    repositories that each serve two products (`CASHI_Spoke_Webapp` 140, `file-transfer-service` 11),
+    so the six populations are not additive. The earlier total of 1,441 was arithmetically wrong on
+    its own terms: it summed five populations and silently dropped Files.com's 11.
 - **Lessons learned:**
   - ⚠️ **Bound the query on the observation window end, not the collection date.** The first pull
     used `merged:2025-10-01..2026-09-04` — 9/04 was simply the day the script ran. That put PRs
     merged September 1–4, 2026 into two populations that are scoped to end 8/31/2026: SLO 388→376
-    (12 rows) and Servicing 508→505 (3 rows). Found on 9/14 *after* the populations had already
+    (12 rows) and Servicing 508→505 (3 rows; Servicing later rose to 515 when two in-scope repos
+    missing from that pull were added). Found on 9/14 *after* the populations had already
     been submitted to the auditor, so it had to be disclosed and re-uploaded rather than quietly
     fixed. The window end is a fixed constant for the whole audit; hardcode it once at the top of
     the script and assert against it after every pull.
-  - When trimming a submitted population, write the removed rows to a
-    `*_excluded_out_of_period.csv` sidecar and attach it alongside. A row count that silently
-    drops between submissions is an IPE completeness problem; an itemized exclusion list is not.
-    See `analysis_sept14/trim_change_populations.py`.
+  - When trimming a submitted population, write the removed rows to a sidecar and attach it
+    alongside — a row count that silently drops between submissions is an IPE completeness
+    problem, an itemized list is not. **But name the sidecar for what the rows are, not for what
+    they are outside of.** `*_excluded_out_of_period.csv` was the wrong name: the period runs to
+    9/30/2026, so a September merge is *in* period and only outside the extraction window. Renamed
+    2026-09-15 to `<population>_changes_merged_2026-09-01_to_2026-09-04.csv` with a note stating
+    both boundaries. See `analysis_sept14/trim_change_populations.py` and
+    `fix_excluded_rows_label.py`.
+  - ⚠️ **`gh pr list` returns HTTP 502 on the busiest repos and a bare script reads that as zero.**
+    A single-attempt pull silently short-counted `CASHI_Spoke_Webapp` (140→0),
+    `servicing-rose-window-www` (143→0) and `home-base-ui` (153→0), which dropped SchoolHub to 64
+    of 204 and Servicing to 219 of 515. Nothing in the output says "truncated" — the population
+    just comes out small and plausible. Retry with backoff (4 attempts, `5 * (i+1)` seconds) and
+    treat a non-zero exit as fatal, never as an empty repo. A repo that genuinely has no merged
+    changes must be recorded as an explicit zero, so "no changes" and "the call failed" can never
+    look alike.
+  - **Count records, not lines.** A trailing blank line made the Files.com population read as 12
+    rows against a stated 11 and cost real time chasing a phantom row. Every population script now
+    asserts `line_count == record_count + 1` and stops if not. Also: `b.count(b'\n')` inside a
+    single-quoted Python string counts backslash-n, not newlines, and returns 0.
   - GitHub Search API rate limits at ~30 req/min for search — add retries with backoff
   - Some repos return 403 briefly then succeed on retry (e.g., `partner`, `lfm-integration-service`)
   - Repo names don't always match product names — mapping spreadsheet is essential
@@ -1306,11 +1327,69 @@ see lesson 47's state-versus-log asymmetry.
 |---|---|---|---|
 | 1 | `vulnerability_open_sample.csv` (2,000 rows) and `vulnerability_scan_sample_months.csv` (50+50) | Round numbers are API page caps presented as samples. `vulnerability_summary.csv` in the same folder states 58,752 open — the auditor ties these out unaided. No `IPE_documentation.txt` in the folder either. | none, but self-evident |
 | 2 | `crowdstrike_suspicious_activity_alerts.csv` | 2026-06-18 → 2026-09-14, ~90 days of a 12-month period. The floor is detection retention, not the ~Jan 2026 migration — the maturity framing does not explain June. Measure and disclose the floor. | **closing daily** |
-| 3 | Req 27 change populations, 1,453 rows / 6 files | Most-sampled population in the engagement. Two different schemas across the six, and the repo-to-system mapping — the actual completeness claim — appears nowhere. | none, GitHub PRs never expire |
+| 3 | Req 27 change populations, 1,462 rows / 6 files | Most-sampled population in the engagement. Two different schemas across the six, and the JSON the six IPEs name as their intermediate was never kept. | none, GitHub PRs never expire |
 | 4 | `it_offboarding_population.csv` | 40 rows, 17 in 2026-08, none Feb/Mar. `Created` is ticket date, not termination date. Needs the Workday raw termination export beside it, the way EL.04 already does it. | none |
 | 5 | `new_modified_access_population.csv` | 140 rows, clean 11-month spread, structurally the healthiest population staged. Only wants raw JSON + the JQL. | none |
 
 Then the four judgment-column files. Then stop — do not sweep the `Config -` folders.
+
+**Status 2026-09-15.** Items 1, 2 and 3 are closed; 4 and 5 remain, 4 still blocked on HR.
+
+- **Item 1 — closed by stating the basis, not by dumping the population.** `refresh_vuln_counts.py` re-pulled exact figures from `meta.pagination.total` on `limit=1` queries, and the packet now names both extracts as extracts taken in the platform's own return order, with the population each came from and an offer to produce the full month. The 400-vs-2,000 contradiction in the IPE is gone. The counts CSV itself stayed internal.
+- **Item 2 — the premise was wrong and the re-pull was unnecessary.** See "CrowdStrike alert date fields" below. The June floor is capability onboarding; the fix was capturing the proof (`prove_crowdstrike_retention.py` → ESEC-212), not re-pulling data.
+- **Item 3 — closed, and the completeness claim I said was missing was partly already there.** The IPEs did name the repositories and the mapping workbook. What was actually wrong is listed under lesson 54.
+
+**A stated data path that isn't retained is itself the defect — and retaining it finds others.**
+Each of the six Req 27 IPEs stated its path as `GitHub API → gh CLI → JSON → CSV`, and the JSON step was
+real but never kept, so the CSV was the earliest artifact anyone could see. Re-pulling that intermediate
+through the same path (`pull_change_population_raw.py`, same `gh` account the IPE names) cost one script
+and surfaced four defects that reading the CSVs could not:
+
+1. **The Servicing population was short 10 changes in its own stated scope.** Its IPE claimed 14
+   repositories and named 13. Querying every repository on the workbook's Servicing sheet found
+   `feed-ingestor` (9 merged PRs) and `nd-validations` (1) had never been queried. Reissued at 515 rows.
+   MMAX had the same shape of gap — 18 named, "+ others", 21 claimed — and its missing three are not
+   recoverable from any script; a sweep of adjacent naming families found no in-scope repo omitted, so
+   the IPE now names the 18 queried and drops the unsupportable 21.
+2. **Three stated end dates for one control and period** — 2026-09-04 (CASHI/MMAX/SchoolHub), 2026-08-31
+   (SLO/Servicing), 2026-09-30 (Files.com, *after* the date it was collected). Every population's latest
+   actual merge is ≤ 2026-08-31, so one window reproduces all six counts exactly. Proving that before
+   rewriting anything is what made the reconciliation safe.
+3. **Two files named `*_excluded_out_of_period.csv`** held 15 PRs merged 2026-09-01→04 — inside the audit
+   period, outside the extraction window. The label asserted Earnest had excluded in-period changes.
+   Renamed to the explicit date range, staged, and tracked; they were Jira-only before, in no manifest.
+4. **`reviewDecision` cannot be used as approval evidence, and would have manufactured 98 exceptions.**
+   It is the PR's *current* decision state: it reverts to `REVIEW_REQUIRED` the moment a commit lands
+   after an approval and stays there after merge, and it is null when the base branch has no
+   required-review rule. 98 of 1,462 merged PRs read something other than `APPROVED`; pulling the actual
+   review history (`resolve_review_decisions.py`) showed **97 of 101 had a peer approval at or before
+   merge**. Staging the field would have handed the auditor 98 phantom findings on a change-approval
+   control. Request 27 asks for a population, so the field is not carried; approval is tested against the
+   review history at each PR URL. The four genuine ones are held internally in
+   `review_decision_resolution.json` — three are Copilot agent PRs merged by a named engineer, one is a
+   human PR with ten review events captured as `COMMENTED` rather than `APPROVED`.
+
+Also fixed while in there: all six CSVs now share one schema (`repo,pr_number,title,url,author,merged_date`)
+where Files.com had its own with a `Review Decision` column; row order is stated (repo, merge date, PR
+number) where it was previously unstated and unreproducible; full titles replace ~80-char ellipsis
+truncation; Files.com's trailing blank line is gone, which is what made a line count say 12 and a record
+count say 11. The consolidated IPE (ESEC-148) had a total of **1,441 that silently excluded Files.com** and
+is now 1,462 rows / 1,311 unique, with both shared repositories named.
+
+**Generate IPEs from the retained raw, don't hand-maintain them.** `generate_change_population_ipes.py`
+reads every figure out of the JSON sitting beside the CSV, so a count cannot drift from its evidence.
+Six IPEs plus the consolidated one, regenerated in one command.
+
+**CrowdStrike alert date fields — the asymmetry that inverts a retention conclusion.** Falcon alerts carry
+`created_timestamp` (when the record was first raised; not rewritten) and `timestamp` (event time,
+**refreshed** on container posture findings, because posture is reported as present state). Filter a
+retention question on `timestamp` and the whole tenant looks ~90 days old and reads as a retention wall —
+including 2.88M container findings that plainly did not all occur in one week. Filter on
+`created_timestamp` and the oldest record is a posture finding first raised 2025-12-08 whose `timestamp`
+reads 2026-07-03, later than its own creation. Retention reaches ~6 months further back than the activity
+population begins, so retention cannot set that start date; activity alerts first raised before
+2026-06-01 = **0**. Capability onboarding, not aging-out. The two are distinguishable only by asking
+whether records of *any* type predate the boundary.
 
 **Already correct, leave alone:** Kandji `All Devices` (native export); EL.04 contractor and background-check populations (raw `.xlsx` staged alongside — this is the pattern to copy); Req 96 email security (`gmail_log_retention_limitation.pdf` plus no-data screenshots for the months outside the 6-month wall — this is the template for item 2); Req 214 `backup_events.csv` (14-day span, but the IPE states the 14-day duration, RDS event history is a hard 14 days and unrecoverable, and `aws_backup_recovery_points.csv` already covers the period from object state — point the IPE at it and it is done).
 
