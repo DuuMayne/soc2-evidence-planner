@@ -849,6 +849,76 @@ still need a disposition before Baker Tilly reads the Req 108 CSV.
 
 6. **Baker Tilly evidence format receptivity:** Evidence is objectively stronger than last year but formatted differently from what Baker Tilly is used to (CSVs, API outputs, narrative documents vs. screenshots). Justification document is designed to bridge the gap but auditor may still push back. Three-layer plan: justification doc → supplement with screenshots if needed → escalation via personal contact to BT head of assurance if they reject stronger evidence for format reasons.
 
+### September 15, 2026 (Session 9 — Req 39 rebuilt; export provenance audited)
+
+**Req 39 / CM.09 (ESEC-162) rebuilt.** The published package was three partial CSVs plus an IPE
+carrying two real defects. Replaced with three files covering the full period, built by
+`analysis_sept14/pull_patching_approvals.py`:
+- `patching_monthly_approvals.csv` — all 9 monthly patching tickets Oct 2025–Jun 2026, approval
+  comment reproduced verbatim, quarterly epic on each row, work-start from the changelog.
+- `june_2026_production_patching.csv` — the 7 June production infrastructure patching changes with
+  named approvers, approval/merge timestamps and the AWS EKS apply each produced.
+- `IPE_documentation.txt` — rewritten.
+
+Two defects fixed in the process:
+1. **AWS timestamps were 7 hours early.** `aws eks describe-update` returns an offset-aware value the
+   CLI renders in local time (`-07:00`); the old collector stripped the offset and stored Pacific
+   wall-clock as UTC. That inverted the approval sequence — the change appeared to precede the PR that
+   authorised it. Corrected, all five June applies land **3–15 minutes after** their PR merged.
+2. **The PRs were attributed to the wrong ticket.** Published evidence tied the June EKS PRs to
+   SRE-1658 (June monthly patching). SRE-1658's actual work is Tenable `dnf update` over SSM on two
+   Nessus hosts and produces no PR at all. The PRs belong to SRE-1797 / SRE-1798.
+
+**The EKS upgrade track is separate from monthly patching.** Infrastructure version upgrades roll up
+to their own quarterly epic series — SRE-93 (Q4 2025), SRE-1559 (Q1 2026), SRE-1561 (Q2 2026) — with
+per-cluster, per-version-step children. Two findings worth carrying forward:
+- **SRE-1797, SRE-1798, SRE-1794 and SRE-1796 are orphans.** Jira's own automation posted "This issue
+  is missing a parent" on each, twice. Setting parent = SRE-1561 completes the chain epic → task →
+  approved PR → AWS apply. Not done — they're SRE's tickets, pending Adam's go-ahead.
+- **Do not cite SRE-37/36/68/39/46/47/58 as the June change record.** All were resolved 2026-05-18 in
+  a bulk close while the matching AWS applies happened 2026-06-26 — resolution predates the change.
+  SRE-1797/1798 are the accurate record.
+
+**Export provenance audit — the finding to circle back on.** Adam asked whether our exports are
+actually exports. Measured across the staged tree: **105 distinct CSVs, 91 built by our collectors,
+9 genuine vendor exports, 5 mixed, and zero raw API responses staged anywhere.** See lessons 53–55.
+The data is sound; the gap is tie-out. Remediation plan, in priority order, deferred pending Navient
+feedback on column L of the shared request list:
+1. Dump the unmodified API response as `<stem>_raw.json` beside each derived CSV.
+2. Prefer native console exports where the vendor UI offers one.
+3. Strip the four judgment columns (lesson 54).
+4. State the transformation in each IPE with the raw file as the tie-out.
+Scope it to **populations first** — those are what get completeness-and-accuracy tested; config
+snapshots rarely do.
+
+**Evidence tree moved into Google Drive.** Adam installed Drive for Desktop and moved the tree to
+`~/Library/CloudStorage/GoogleDrive-adam.duman@earnest.com/My Drive/SOC2_2026_Evidence_Upload`.
+Added `analysis_sept14/paths.py` as the single source of truth for the tree location — 17 scripts
+hardcoded the old path. Only the scripts touched this session import it; the rest still hardcode and
+will need repointing when re-run. Direct-sync automation was explicitly dropped.
+
+**`INDEX.xlsx` / `INDEX.csv` at the tree root**, from `analysis_sept14/build_drive_index.py`: request
+number, control, path, sha256, Jira ticket and attachment ID per file, filterable, with a summary tab
+(339 files, 68 requests, 35 controls). Built because **39 files are named `IPE_documentation.txt`** and
+a Drive search returns 39 indistinguishable hits. Nothing actually collides — no request folder holds
+two files of the same name — but you cannot tell that from search results.
+
+**Two self-inflicted errors worth recording.** The manifest's `folder` field is already the full path
+from the tree root; I read it as relative to `control_folder`, which (a) appended three duplicate
+manifest rows instead of updating the existing ones and (b) wrote the three files into a spurious
+nested `CM.09/CM.09/` directory in Drive. Both repaired — files relocated, stray directory removed,
+manifest back to 339 rows with all rows verified present on disk. **Read the manifest schema before
+writing to it; a field named `folder` is not necessarily a leaf.**
+
+**Google Sheets is not readable through Drive for Desktop.** Native Google files sync as JSON stubs
+containing only a `doc_id` — no data — and "Shared with me" is not synced at all. Only uploaded
+`.xlsx` hydrate as real files. The shared request list (`17kATahp-…`, `rtpof=true`) is an uploaded
+xlsx, so downloading it or moving it into My Drive makes column L readable. Also: do not run a
+recursive `grep` across the Drive mount — it forces Drive to hydrate every file and had to be killed.
+
+**Status:** ESEC-162 holds exactly three attachments (231865, 231866, 231867); superseded 230834,
+230824, 230633 and 230632 deleted after verifying the replacements live. Waiting on Navient feedback.
+
 ---
 
 ## For Next Year
@@ -1077,3 +1147,35 @@ still need a disposition before Baker Tilly reads the Req 108 CSV.
     each caller, because the one caller that forgets is the one that ships. Corollary from the same
     pass: two different apps both reporting exactly 497 users is not a coincidence either — it was one
     near-everyone group expanding, and it's worth a second look before it becomes a sentence.
+
+53. **"Export" is a claim about provenance, not a file extension.** A measured audit of the staged tree
+    found 105 distinct CSVs, of which **91 were built by our collectors** and only **9 were genuine
+    vendor exports**; zero raw API responses were staged as evidence anywhere. The tell is in the
+    headers — Kandji's own export reads `Device Name, Display OS Version, Blueprint Name`, while our
+    `cloudwatch_alarms.csv` reads `name, state, metric` where AWS actually returns `AlarmName`,
+    `StateValue`, `MetricName`. Every field was renamed. That is not inaccuracy; the data is sound. It
+    is a **tie-out** problem: the auditor cannot map our column to a source field without reading our
+    code, so completeness-and-accuracy testing has nowhere to land except our good faith. The fix is
+    cheap and was simply never done — the collector already has the response in hand, so dump it
+    unmodified as `<stem>_raw.json` beside the readable CSV and let the IPE say "fields renamed from X
+    to Y, no rows added or removed, tie out to the raw file." Prefer a native console export over an
+    API-built CSV whenever the vendor UI offers one (Kandji, Okta, CrowdStrike, Workday and Jira all
+    do); it costs a click and is the most credible artifact available. Retain raw from the first run,
+    because reconstructing provenance after the fact is far more expensive than keeping it.
+
+54. **Don't hand the auditor your conclusion where they wanted your data.** Four staged files carry
+    columns that state a verdict rather than a fact: `separation_of_duties` and `author_self_approved`
+    (CM.08), `is_engineer_team` / `is_infra` / `is_org_admin` (CM.08), and `approved_before_merge`
+    (CM.09). Each is us performing the auditor's test and shipping the answer, which invites them to
+    audit our logic instead of the control — and if our logic is wrong the whole file is impeached.
+    Ship `author` and `approvers`; let them conclude on separation of duties. The distinction that
+    matters is source-field versus derived-judgment: `is_default`, `is_encrypted` and `is_public` look
+    like the same pattern but are AWS's own fields, so they stay. Same reasoning already applied to the
+    monthly patching CSV, where the approval comment is reproduced verbatim and no derived
+    approval-precedes-work-start column was added.
+
+55. **A cross-system join is useful evidence and is not an export — say so.**
+    `june_2026_production_patching.csv` fuses Jira, GitHub and AWS into rows that exist in no single
+    system. That is the most legible artifact in the package and the least like a native export, and
+    both facts need to be on the page: name the three sources, name the join key, and keep each
+    system's own record retrievable so the correlation can be checked rather than believed.

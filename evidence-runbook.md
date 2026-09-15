@@ -1260,6 +1260,63 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
 
 ---
 
+## Export Provenance and Raw Retention
+
+Deferred as of 2026-09-15, pending Navient feedback. Recorded here so the shape of the work is not
+re-derived later. Full reasoning in WORKFLOW.md lessons 53–55.
+
+**The measurement.** Across the staged tree: 105 distinct CSVs, of which **91 were built by our
+collectors**, **9 are genuine vendor exports**, 5 are mixed, and **no raw API response is staged as
+evidence anywhere** (4 `.json` files exist; 3 are our own IPE narrative). The header naming is the
+tell — a vendor export keeps the source system's field names, ours are snake_case:
+
+| File | Header | Provenance |
+|---|---|---|
+| `All Devices - 2026-09-04.csv` | `Device Name, Display OS Version, Blueprint Name` | Kandji export |
+| `cloudwatch_alarms.csv` | `name, state, metric, namespace` | ours — AWS returns `AlarmName`, `StateValue`, `MetricName` |
+
+This is a tie-out problem, not an accuracy problem. The auditor cannot map our column to a source
+field without reading our code, so completeness-and-accuracy testing has nowhere to land.
+
+**Remediation, in priority order:**
+1. **Dump the unmodified response as `<stem>_raw.json` beside each derived CSV.** The collector already
+   holds it; this is a few lines per script. Highest value per hour by a wide margin.
+2. **Prefer a native console export where the vendor UI offers one** — Kandji, Okta, CrowdStrike,
+   Workday and Jira all do. Costs a click, most credible artifact available.
+3. **Strip the four judgment columns.** `separation_of_duties` / `author_self_approved` and
+   `is_engineer_team` / `is_infra` / `is_org_admin` (CM.08), `approved_before_merge` (CM.09). Ship the
+   inputs, let the auditor conclude. Keep `is_default` / `is_encrypted` / `is_public` — those are AWS's
+   own fields, facts rather than judgments.
+4. **State the transformation in each IPE**: "fields renamed from X to Y, no rows added or removed, tie
+   out to `<stem>_raw.json`."
+
+**Scope it to populations first.** Populations are what get completeness-and-accuracy tested; config
+snapshots rarely do.
+
+**Time-critical caveat.** Anything log-backed cannot be re-pulled later — the Okta System Log is a
+~90-day window (measured floor 2026-06-17 on 2026-09-14) and Google Workspace audit logs retain 6
+months. For those sources the raw response either gets captured now or the early audit period is
+permanently unrecoverable. Object state (assignment `created` dates) is the way out where it exists;
+see lesson 47's state-versus-log asymmetry.
+
+**Where raw data most needs re-pulling** (ranked 2026-09-15 against the staged tree, not against the
+91-collector-CSV count — most of those 91 are config snapshots nobody C&A-tests):
+
+| # | Artifact | Why | Clock |
+|---|---|---|---|
+| 1 | `vulnerability_open_sample.csv` (2,000 rows) and `vulnerability_scan_sample_months.csv` (50+50) | Round numbers are API page caps presented as samples. `vulnerability_summary.csv` in the same folder states 58,752 open — the auditor ties these out unaided. No `IPE_documentation.txt` in the folder either. | none, but self-evident |
+| 2 | `crowdstrike_suspicious_activity_alerts.csv` | 2026-06-18 → 2026-09-14, ~90 days of a 12-month period. The floor is detection retention, not the ~Jan 2026 migration — the maturity framing does not explain June. Measure and disclose the floor. | **closing daily** |
+| 3 | Req 27 change populations, 1,453 rows / 6 files | Most-sampled population in the engagement. Two different schemas across the six, and the repo-to-system mapping — the actual completeness claim — appears nowhere. | none, GitHub PRs never expire |
+| 4 | `it_offboarding_population.csv` | 40 rows, 17 in 2026-08, none Feb/Mar. `Created` is ticket date, not termination date. Needs the Workday raw termination export beside it, the way EL.04 already does it. | none |
+| 5 | `new_modified_access_population.csv` | 140 rows, clean 11-month spread, structurally the healthiest population staged. Only wants raw JSON + the JQL. | none |
+
+Then the four judgment-column files. Then stop — do not sweep the `Config -` folders.
+
+**Already correct, leave alone:** Kandji `All Devices` (native export); EL.04 contractor and background-check populations (raw `.xlsx` staged alongside — this is the pattern to copy); Req 96 email security (`gmail_log_retention_limitation.pdf` plus no-data screenshots for the months outside the 6-month wall — this is the template for item 2); Req 214 `backup_events.csv` (14-day span, but the IPE states the 14-day duration, RDS event history is a hard 14 days and unrecoverable, and `aws_backup_recovery_points.csv` already covers the period from object state — point the IPE at it and it is done).
+
+**Going forward: retain raw from the first run.** Reconstructing provenance after the fact costs far
+more than keeping it, and for retention-limited sources it is not possible at all.
+
 ## IPE Checklist
 
 Every evidence collection must include:
