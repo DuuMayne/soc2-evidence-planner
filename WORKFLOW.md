@@ -93,7 +93,11 @@ For evidence that requires other teams:
 | CrowdStrike | Combined vuln endpoint (`/spotlight/combined/vulnerabilities/v1`) returns NO severity data | Must use query endpoint for IDs, then `/spotlight/entities/vulnerabilities/v2` for full details |
 | CrowdStrike | Zero vulns before November 2025 | Spotlight wasn't active — not a bug |
 | CrowdStrike | Zero closed vulns before July 2026 | No remediation happening before Linux fleet onboarded — real data |
-| CrowdStrike | Detections/incidents endpoints return 404 | API scope doesn't include those — need different key |
+| CrowdStrike | Legacy detections/incidents/behaviors endpoints return 404 | **Decommissioned, not a scope problem** — no key reaches them. Use Alerts v2 (`/alerts/queries/alerts/v2`, `/alerts/entities/alerts/v2`, `/alerts/aggregates/alerts/v1`) |
+| CrowdStrike | `scp` claim in the OAuth JWT is `[]` | Tells you nothing about what the key can do — probe the endpoint |
+| CrowdStrike | Alert counts don't sum to the total | Image scanning runs continuously; sequential count queries sample different moments. Get the breakdown from ONE terms aggregation |
+| CrowdStrike | 2.72M+ "alerts" in the period | All but 95 are `cwpp-*` posture/vulnerability findings, not activity. IOM and drift records are current-state and all carry the export date |
+| CrowdStrike | `seconds_to_triaged` = 0 on most alerts | Means never worked, not instant triage. Define "worked" by the presence of `resolution` |
 | CrowdStrike | Users API returns no role assignments | Roles managed via Okta SSO, not CrowdStrike native RBAC |
 | Slack | App config tokens (`xoxe.xoxp`) only have `identify,app_configurations:read/write` | Need a token with `channels:history`, `channels:read` to read messages |
 | macOS | `cp` fails with special characters (Unicode non-breaking spaces) in filenames | Use Python `shutil.copy2(glob.glob(...)[0], dest)` |
@@ -714,6 +718,62 @@ Final tree: **355 files, 336 manifest rows, 95.9 MB, 0 hash mismatches, 0 `.md`,
 readable, 15 requests still awaiting third parties or auditor selection** (down from 16). Correction-
 language sweep clean — remaining hits are CVE descriptions and PR titles.
 
+### September 14, 2026 (Session 8, continued — Req 108 CrowdStrike population; Req 46 gap confirmed)
+
+Navient asked for an actual export behind Req 108: *"Can the team provide an export of the events
+during the timeperiod or, if historic data doesn't go back that far, then as far back as possible?
+The provided screenshot appears to show an incomplete list of events from a 3 day history."* The
+answer for the security half of CO.01 is CrowdStrike, and it took a working key to get it — the first
+credential was rejected at us-2, us-1, eu-1 and gov with both body-param and Basic auth, and Adam
+supplied a replacement that authenticated immediately.
+
+**The population is 95 alerts, and getting to that number was the work.** A naive "all alerts in the
+period" query returns 2.72 million. Adam scoped it: *"Keep the crowdstrike specific to the control
+language. 'Suspicious or unusual activity alerts' not just all security alerts."* The data agreed —
+all but 95 records are `cwpp-image-scan-detections` (container image vulnerabilities, which are IT.06
+evidence), `cwpp-k8s-ioms` and `cwpp-drift-indicators`. The latter two are current-state posture
+snapshots that all carry the export date, so including them would have asserted a million events in
+September. Delivered `crowdstrike_suspicious_activity_alerts.csv` (95 rows, 23 columns) and
+`crowdstrike_co01_alert_summary.txt` to ESEC-212.
+
+**Framed as onboarding maturity, per Adam:** *"lets frame this as maturity and onboarding from one
+tool to another like the other crowdstrike related data."* Timeline: Spotlight 2025-11-07 → first
+tenant alert record 2025-12-08 → contract ~Jan 2026 replacing Splunk → detection and NGSIEM
+correlation alerting 2026-06-18. I nearly mis-diagnosed that June floor as retention; checked and
+disproved it — December 2025 image-scan alerts are still present, so nothing aged out. It is when the
+capability came online, which is a different and much better sentence.
+
+Also replaced `co01_security_monitoring_supplement.pdf`, which said the API scope did not reach the
+detection endpoints and so alert data could not be exported directly. It can, and now is, so that
+sentence would have contradicted the file sitting next to it — and it read as withholding. Same
+removal from the CO.01 justification section. See lesson 49.
+
+Corrected two claims against the API rather than repeating them: the August 14 Okta alert was triaged
+**52 minutes** after the event and closed at 1h49m, not "within 3 hours" as both the supplement and
+the PIR summary said; and 86 of the 95 alerts have `seconds_to_triaged` = 0, which means never worked,
+not instant triage — so "worked" is defined by the presence of `resolution` (9 alerts, 8 false
+positive, 1 true positive: IntelDomainHigh, resolved in 40 minutes) and the IPE says what the zero
+means. See lesson 50.
+
+Two open High cloud-IOA alerts surfaced that Adam needs an answer for before Baker Tilly reads the
+CSV: "Write API call originated from known-malicious IP address" in prod account 075440130607 on
+2026-08-21 and 2026-08-22, both still `new` with no disposition.
+
+**Req 46 (LS.02 provisioning approvals) — Adam's suspicion confirmed with numbers.** *"That is likely
+missing all access except possibly files.com."* Of the 140 tickets in the ESEC-171 population:
+Files.com 18 genuine, SLO 13 keyword hits but only ~3 real application-access requests (the rest are
+GitHub, Dropbox, FullStory, Splunk, 1Password and the `slo-service` database), MMAX ~3, Servicing ~1,
+**SchoolHub 0, CASHI 0**, and 97 of 140 name no in-scope system at all. The structural tell: Req 27
+and Req 35 each have six per-system ESEC tickets; Req 46 has one. Not a Tyler/Gaige failure —
+IT-21925 asked them for Google Workspace, UniFi, asset disposal and a hires/terms/transfers list,
+never per-application provisioning, and they delivered on 9/11. Five of the six in-scope systems are
+Earnest-built apps administered by engineering, which is the NS-534 gap already disclosed on ESEC-183.
+The ESEC-171 IPE currently claims a per-system breakdown the rows do not support and needs correcting
+either way. Blocked on the Okta token **value** — the string supplied was the 20-character token ID,
+which 401s; values are 42 characters.
+
+Tree after this pass: **340 manifest rows, 359 files, 100.3 MB, 0 hash mismatches, 0 stray `.md`.**
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -918,3 +978,22 @@ language sweep clean — remaining hits are CVE descriptions and PR titles.
     testing jobs start 2025-12-31, so Oct–Dec 2025 has no restore jobs" and it was heard as a gap in
     backups. Two different controls, two different populations, and the conflation was mine for
     putting them in one sentence. When a date bounds one assertion, name the assertion it bounds.
+
+49. **A disclaimer about tooling limits becomes a false claim the moment the tooling improves — and it
+    was already reading as withholding.** Two documents said the CrowdStrike API scope did not include
+    the detection endpoints, so alert data could not be exported directly. When a working key produced
+    the full alert population, that sentence would have sat next to a file proving it wrong. The
+    failure mode is worse than being outdated: "we can't export this" invites the auditor to ask what
+    else we can't export. Sweep for capability disclaimers whenever a credential, scope or access path
+    changes, and prefer stating what *is* provided over explaining what isn't. The legacy endpoints
+    turned out to be decommissioned outright rather than out of scope, so the original diagnosis was
+    wrong too — a 404 is not evidence about permissions.
+
+50. **A zero in a duration field usually means the clock never started.** 86 of 95 CrowdStrike alerts
+    carry `seconds_to_triaged: 0`. Rendered naively that reads as instant triage on every open alert,
+    which is a stronger claim than the control makes and a false one. The field is populated only for
+    alerts worked to a disposition, so "worked" has to be defined by the presence of `resolution`, not
+    by a non-zero timing. Same instinct as the retention lesson: before presenting a field as a
+    measurement, ask what writes it and when. And check the numbers you inherited from your own earlier
+    prose — the supplement said the August Okta alert was "triaged within 3 hours" when the API records
+    52 minutes, a figure that was better than claimed and still wrong.

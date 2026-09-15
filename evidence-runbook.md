@@ -952,6 +952,22 @@ that actually ships.
 `INDEX.md` was retired for `EVIDENCE_INDEX.xlsx` (3 sheets: files / per-control totals / requests
 without files). The README offers any document in Word format on request.
 
+**Ship PDF is the default, not the rule.** The evidence request justification key went the other way
+on 2026-09-14: it is read, quoted and annotated rather than filed, so plain text greps, diffs and
+pastes into a workpaper without dragging fonts and link colour along. `analysis_sept14/md_to_txt.py`
+renders it — `WIDTH = 96`, inline bold/italics/code/links stripped to their label, headings become
+`=`/`-` underlines, and pipe tables are laid out as aligned fixed-width columns (natural column
+widths, then shrink the widest proportionally until the table fits, wrapping cells rather than
+running off the screen). Tables are the only thing Markdown gives that plain text does not, which is
+why they get the work. Republish with `analysis_sept14/republish_justification.py`, which resolves
+the attachment it is replacing from the manifest — the earlier `justification_to_txt.py` hard-coded
+that ID, which is correct exactly once and wrong on every later run.
+
+When composing an auditor-facing plain-text doc from code, wrap the paragraphs that interpolate
+numbers through a helper rather than hand-wrapping the string literals. Hand-wrapped f-strings
+re-ragged every time a count changed. Use `break_on_hyphens=False` or `textwrap` splits ticket keys
+like `SEC-INC-081726` across lines.
+
 ---
 
 ## Email Security — LS.13 (ESEC-196/197/198/199)
@@ -1153,6 +1169,51 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
     `test123` plan. When Quarterly or Yearly fires on the same date as Monthly, AWS attributes the
     recovery point to the longer-retention rule, so per-rule counts move month to month while the
     per-database count stays at two.
+
+### CrowdStrike Falcon (added 2026-09-14)
+- **Cloud:** us-2 — `https://api.us-2.crowdstrike.com`. The cloud is per-tenant; us-1, eu-1 and the
+  gov cloud reject a us-2 key with a 403 that reads like a bad credential rather than a wrong host,
+  so confirm the cloud before concluding the key is dead.
+- **Auth:** `POST /oauth2/token`, form-encoded `client_id`/`client_secret` in the body, then
+  `Authorization: Bearer <token>`. Tokens live 1799s. Body params work; HTTP Basic is not needed.
+- **Alerts v2 is the surface.** `/detects/queries/detects/v1` is **decommissioned** — it 404s no
+  matter what scopes the key holds, as do the incidents and behaviors endpoints. Do not read those
+  404s as a scope problem; the JWT `scp` claim is `[]` on these keys and tells you nothing.
+  - `GET /alerts/queries/alerts/v2?limit=&offset=&filter=&sort=` → composite IDs, 100 per page
+  - `POST /alerts/entities/alerts/v2` with `{"composite_ids":[...]}` → full records, 100 per call
+  - `POST /alerts/aggregates/alerts/v1` with `[{name,type:"terms",field,size,filter}]` → counts.
+    A date_range aggregation takes its ranges under the key `date_ranges`, not `date_range`.
+- **FQL filters** must be URL-quoted, joined with `+`, values single-quoted, negated sets with `!`:
+  `created_timestamp:>='2025-10-01'+created_timestamp:<'2026-10-01'+type:!['cwpp-k8s-ioms']`
+- **Get type counts from ONE aggregation, not one query per type.** Image scanning runs
+  continuously, so sequential count queries return counts from different moments and the exclusions
+  stop summing to the total. That broken arithmetic is the first thing an auditor checks.
+- **Posture findings are not activity events.** In the 2026 tenant, ~2.73M of ~2.73M alerts in the
+  period are `cwpp-image-scan-detections` (container image vulnerabilities — IT.06 evidence, not
+  CO.01), `cwpp-k8s-ioms` and `cwpp-drift-indicators`. The IOM and drift records are current-state
+  snapshots that all carry the export date, so they are not a time series at all. Excluding them by
+  type leaves 95 genuine activity detections. Scope to the control language and say what you
+  excluded with counts.
+- **Alert schema varies by product.** `epp`/`ldt` endpoint, `ngsiem`/`correlation-detection`,
+  `fcs`/`cloud-ioa` + `content-engine-detection-fcs`, `thirdparty`, `automated-lead` and
+  `automated-lead-context`/`signal`. `device` is a dict with `hostname`; `host_names`, `source_ips`,
+  `user_names` are lists; `mitre_attack` is a list of `{tactic_id, technique_id, tactic, technique}`.
+  NGSIEM alerts have no `device` but carry `correlation_rule_id`, `correlation_rule_user_id` (rule
+  author — Earnest-authored rules show an earnest.com address), `data_domains` and
+  `falcon_host_link`.
+- **`seconds_to_triaged`/`seconds_to_resolved` read 0 when the alert was never worked**, not "zero
+  elapsed". Define "worked" by the presence of `resolution`, and say so in the IPE — otherwise the
+  export implies instant triage on every open alert.
+- **Falcon Complete leads are named `<hostname> at <timestamp>`**, so each is unique. Group them in
+  any roll-up of "which detections fired" or one mechanism reads as N separate detections.
+- **Onboarding timeline** (needed to frame the detection floor as maturity, not a gap): Spotlight
+  activated 2025-11-07; first alert record of any kind in the tenant 2025-12-08 (image scanning);
+  contract ~January 2026, replacing Splunk; first detection/correlation alert 2026-06-18T19:33:07Z
+  ("AWS - CloudTrail - Potential Session Hijacking"). No detection has an event timestamp before
+  2026-06-01. **Retention is not the cause** — December 2025 image-scan alerts are still present,
+  so nothing has aged out. It is when the capability came online.
+- **Collector:** `analysis_sept14/pull_crowdstrike_co01_alerts.py`. Credentials via `CS_CLIENT_ID`
+  and `CS_SECRET` in the environment, never written to disk.
 
 ---
 
