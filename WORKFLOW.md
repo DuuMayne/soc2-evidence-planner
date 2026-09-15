@@ -774,6 +774,67 @@ which 401s; values are 42 characters.
 
 Tree after this pass: **340 manifest rows, 359 files, 100.3 MB, 0 hash mismatches, 0 stray `.md`.**
 
+### September 14, 2026 (Session 8, end — Okta unblocked, Files.com scoped, stopped for the night)
+
+Adam supplied the 42-character Okta token value and it authenticated against
+`https://meetearnest.okta.com` immediately, which unblocks the two things the previous entry says are
+blocked. **Nothing was collected. This is a state handoff, not a delivery.** Twelve-hour day; Adam
+called it: *"Stop. Just log this and im calling it a night."*
+
+**What the token showed, before stopping.** The tenant holds **370 apps, 240 ACTIVE**. Against the six
+systems Req 46 names:
+
+| Req 46 system | In Okta? | Assignments | In-period `created` |
+|---|---|---|---|
+| Files.com | Yes, SAML 2.0, `0oa1bicu49zskHd5b0x8` | 62 users, 8 groups | 30 |
+| MMAX | Yes, `MMAX-UI`, OIDC, `0oa16wlfu6wnykcGe0x8` | 13 users, all direct, 0 groups | 11 |
+| Servicing Platform | `Servicing Dashboard (Prod)`, `0oa6qxnud2D25Cf6C0x7` | 1 user (jen.chi, 2024-06-24) | 0 |
+| SLO Platform | No app of that name — but see below | — | — |
+| School Hub | No | — | — |
+| CASHI | No | — | — |
+
+**The SLO Platform finding, and Adam's scoping call on it.** The in-scope systems sheet defines SLO
+Platform as *"multiple applications including Acru, Verify, Agiloft, Looker and Analyze"* — and all of
+those are in Okta with real in-period assignment activity: `Looker` 426 users / 142 in period,
+`ACRU Service (Prod)` 254 / 96, `Agiloft Production` 153 / 68, `Analyze (Prod)` 142 / 50. I raised it
+as a possible route to the missing Req 46 population. Adam's answer: *"Only files.com is in okta.
+Ignore the rest. Just get me files.com. Well, looker is assigned via okta I think. But lets just do
+Files.com now."* So Files.com is the scope, Looker is a maybe he wants to look at himself, and the rest
+is out. **Do not re-litigate this next session.** The component-app numbers are recorded here only so
+nobody has to re-derive them if he changes his mind about Looker.
+
+Also worth noting for whoever picks this up: the two Non-Prod apps returned **497 users each**
+(`Servicing Dashboard (Non-Prod)`, `Analyze (Non-Prod)`) — same number twice, which is a group
+assignment expanding to near-everyone, and non-prod is out of scope regardless.
+
+**The Okta System Log cannot cover this audit period, and it lies about it.** Oldest reachable event is
+**2026-06-17** — a ~90-day rolling window against a period starting 2025-10-01. The dangerous part:
+asked for `since=2025-10-01`, Okta does not error. It returns the oldest event it still holds, so the
+response looks like a successful year-long pull and is full of June 2026 events. I found it by probing
+four different `since` values and getting the same oldest event back from all four. See lesson 51.
+
+The way through is the same asymmetry as the AWS Backup recovery points in lesson 47: **app-assignment
+`created` timestamps are current object state, not log history, so they do reach back across the whole
+period.** Assignment dates carry period coverage; the System Log corroborates the mechanism for the
+three months it can still see; the retention floor gets stated as a boundary rather than omitted.
+
+**Where the code stands.** `analysis_sept14/okta_api.py` — new, thin read client, token from
+`OKTA_TOKEN` only. Holds `page()` (follows `Link rel="next"`; the apps endpoint caps at 200 and looked
+complete at 200 against a real 370), `log_floor()` (probes with an absurd `since` to measure the real
+retention floor), and 429 handling that honours `x-rate-limit-reset` rather than sleeping a fixed few
+seconds. `analysis_sept14/pull_okta_filescom.py` — written, **never run**. Intended outputs
+`filescom_okta_access_population.csv` (one row per assignment, direct vs. via-group, the granting group
+named, `assignment_granted_in_period` flag), `filescom_okta_group_membership.csv`, and
+`filescom_okta_access_summary.txt` with the retention boundary in the IPE.
+`analysis_sept14/cache_okta_assignments.py` — written, aborted on a 429 mid-run, superseded by the
+Files.com-only scope. No output files exist under `evidence/okta/` from this pass.
+
+**Still open from the previous entry, unchanged:** the ESEC-171 IPE claims a per-system breakdown its
+140 rows do not support (`SLO: 19 | Files.com: 19 | SchoolHub: 8 | MMAX/Spoke: 7 | Onboarding: 87`),
+and the Okta inventory now independently corroborates that — there is no SchoolHub or CASHI app in Okta
+at all. That correction has to happen whatever else Req 46 gets. The two open High cloud-IOA alerts
+still need a disposition before Baker Tilly reads the Req 108 CSV.
+
 ### Key Audit Risks Identified (Session 7)
 
 1. **Pentest timing (IT.09):** Cam confirmed ~2 weeks before SLO pentest can start. Test will initiate within observation window (before 9/30) but final report and remediation will not be complete. Defensible — "testing performed" — but will likely get noted by Baker Tilly. Similar to last year's finding where the pentest covered the prior period.
@@ -997,3 +1058,22 @@ Tree after this pass: **340 manifest rows, 359 files, 100.3 MB, 0 hash mismatche
     measurement, ask what writes it and when. And check the numbers you inherited from your own earlier
     prose — the supplement said the August Okta alert was "triaged within 3 hours" when the API records
     52 minutes, a figure that was better than claimed and still wrong.
+
+51. **The worst API failure is the one that answers successfully.** Ask the Okta System Log for
+    `since=2025-10-01` and it returns HTTP 200 with a full page of events — from June 2026, because the
+    retention window is ~90 days and Okta hands back the oldest thing it still has instead of erroring.
+    Nothing in the response says the range was clamped. Had that gone into an evidence file it would
+    have been a year-labelled population containing three months of data, and the auditor would have
+    been the one to notice. The check is cheap: probe with a deliberately absurd `since` (2015) and
+    whatever comes back *is* the real floor. Do this for every log-backed source before building a
+    population on it, and put the measured floor in the IPE. Related: lesson 47's asymmetry is the way
+    out — object state (an assignment's `created` date) reaches back where log history does not, so
+    prefer state for coverage and logs for mechanism.
+
+52. **A count that equals your `limit` is a page, not a total.** `GET /api/v1/apps?limit=200` returned
+    exactly 200 apps and read as the whole tenant; following the `Link rel="next"` header produced 370.
+    Any list endpoint whose result count is suspiciously round, or identical to the limit you asked for,
+    is truncated until proven otherwise. Pagination belongs in the client (`okta_api.page()`), not in
+    each caller, because the one caller that forgets is the one that ships. Corollary from the same
+    pass: two different apps both reporting exactly 497 users is not a coincidence either — it was one
+    near-everyone group expanding, and it's worth a second look before it becomes a sentence.

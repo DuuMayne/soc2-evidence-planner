@@ -1215,6 +1215,49 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
 - **Collector:** `analysis_sept14/pull_crowdstrike_co01_alerts.py`. Credentials via `CS_CLIENT_ID`
   and `CS_SECRET` in the environment, never written to disk.
 
+### Okta Core API (expanded 2026-09-14)
+
+- **Auth:** `Authorization: SSWS <token>` against `https://meetearnest.okta.com`. **The token
+  *value* is 42 characters; the *ID* is ~20 and 401s.** If a supplied credential 401s immediately,
+  check the length before debugging anything else — asking for the value again costs one message.
+- **Client:** `analysis_sept14/okta_api.py`. `get()`, `page()`, `log_floor()`. Token from
+  `OKTA_TOKEN` in the environment only.
+- **Every list endpoint truncates silently.** `GET /api/v1/apps?limit=200` returns exactly 200
+  against a real 370 — 200 is the page cap, not the total. Always follow the `Link` header:
+  `re.match(r'<([^>]+)>;\s*rel="next"', header)`. Endpoints that need it here: `/api/v1/apps`,
+  `/api/v1/apps/{id}/users` (cap 500), `/api/v1/apps/{id}/groups`, `/api/v1/groups/{id}/users`,
+  `/api/v1/logs`.
+- **The System Log is a ~90 day rolling window and it does not tell you.** Measured floor on
+  2026-09-14: **2026-06-17** — against an audit period starting 2025-10-01. Ask for
+  `since=2025-10-01` and Okta returns **HTTP 200 with the oldest events it still holds**, not an
+  error, so the response looks like a successful year-long pull. `log_floor()` measures the real
+  floor by probing `since=2015-01-01` with `sortOrder=ASCENDING&limit=1`. Run it and put the result
+  in the IPE before building any population on the log.
+- **Use object state for period coverage, the log for mechanism.** App-assignment and group-
+  membership `created` timestamps are current object state, so they span the whole period regardless
+  of log retention. Same asymmetry as AWS Backup recovery points vs. job history (lesson 47).
+- **Rate limits are per endpoint family, per minute, and `/api/v1/logs` is the tightest.** On 429,
+  read `x-rate-limit-reset` (unix seconds) and sleep until it — a fixed 3-second retry just burns
+  attempts against a bucket that has not refilled. Probing the log floor several times in a row will
+  trip it.
+- **`GET /api/v1/apps/{id}/users` returns a `scope` field:** `USER` = assigned directly to the
+  person, `GROUP` = inherited from a group assigned to the app. Both are access and both belong in a
+  provisioning population, but only the direct ones are a decision someone made about that person.
+  To attribute a `GROUP` assignment you have to pull `/api/v1/apps/{id}/groups`, then each group's
+  membership, and map user → group names.
+- **`created` on the assignment ≠ `created` on the user.** The Okta account is older for anyone who
+  held other access first. Only the assignment date speaks to the application.
+- **What is actually in Okta (checked 2026-09-14, 370 apps):** Files.com (SAML,
+  `0oa1bicu49zskHd5b0x8`, 62 users / 8 groups), MMAX-UI (OIDC, `0oa16wlfu6wnykcGe0x8`, 13 users all
+  direct), Servicing Dashboard (Prod) (`0oa6qxnud2D25Cf6C0x7`, 1 user). **No SLO Platform, School Hub
+  or CASHI app exists.** The SLO component apps named in the in-scope sheet (Looker, ACRU, Agiloft,
+  Analyze) are in Okta with heavy in-period activity, but Adam scoped Req 46 to Files.com only —
+  Looker is a maybe he wants to review himself.
+- **Collector:** `analysis_sept14/pull_okta_filescom.py` (written 2026-09-14, not yet run). Outputs
+  `filescom_okta_access_population.csv`, `filescom_okta_group_membership.csv`,
+  `filescom_okta_access_summary.txt`. Earlier Okta collectors for MFA/sign-on/password policies and
+  deprovisioning live in `evidence/okta/`.
+
 ---
 
 ## IPE Checklist
