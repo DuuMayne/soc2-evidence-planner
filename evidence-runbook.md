@@ -1329,11 +1329,48 @@ see lesson 47's state-versus-log asymmetry.
 | 2 | `crowdstrike_suspicious_activity_alerts.csv` | 2026-06-18 → 2026-09-14, ~90 days of a 12-month period. The floor is detection retention, not the ~Jan 2026 migration — the maturity framing does not explain June. Measure and disclose the floor. | **closing daily** |
 | 3 | Req 27 change populations, 1,462 rows / 6 files | Most-sampled population in the engagement. Two different schemas across the six, and the JSON the six IPEs name as their intermediate was never kept. | none, GitHub PRs never expire |
 | 4 | `it_offboarding_population.csv` | 40 rows, 17 in 2026-08, none Feb/Mar. `Created` is ticket date, not termination date. Needs the Workday raw termination export beside it, the way EL.04 already does it. | none |
-| 5 | `new_modified_access_population.csv` | 140 rows, clean 11-month spread, structurally the healthiest population staged. Only wants raw JSON + the JQL. | none |
+| 5 | `new_modified_access_population.csv` | 140 rows, clean 11-month spread. I ranked this as "only wants raw JSON + the JQL" — that was wrong, see below. | none |
 
 Then the four judgment-column files. Then stop — do not sweep the `Config -` folders.
 
-**Status 2026-09-15.** Items 1, 2 and 3 are closed; 4 and 5 remain, 4 still blocked on HR.
+**Status 2026-09-15.** Items 1, 2 and 3 are closed. Item 4 is blocked on HR for the Workday raw
+termination export. **Item 5 is open and is a bigger job than the ranking said — start here next.**
+
+**⚠️ OPEN — Req 46 / ESEC-171: the JQL in the delivered IPE returns zero rows.** I ranked this as
+the healthiest population staged, needing only raw JSON and its query written down. The query *is*
+written down, and running it verbatim against the tenant returns **0 issues**. Decomposed clause by
+clause, the killer is `issuetype = "IT Support"` — **no such issue type exists in this Jira**. The
+real types on the delivered 140 are `Access Request` (79), `Onboarding Request` (39), `Task` (18),
+`Navient Support` (3), `Offboarding Request` (1). So the stated 1,414 raw result could not have come
+from the stated query, and neither could the 140.
+
+This is worse than a missing intermediate, because an auditor who runs the documented query gets
+nothing and the population reads as unsourced. Two further problems in the same IPE:
+
+- **The 140 is not reproducible from any query.** The IPE describes two manual passes removing 1,274
+  of 1,414 tickets on judgement ("kept tickets explicitly referencing…", "removed cancelled
+  onboardings, audit meta-tickets, troubleshooting"). Nobody can land on 140 twice.
+- **The in-scope-system breakdown does not match the file.** It claims 87 onboarding tickets; only 44
+  `Onboarding Request` issues exist tenant-wide in the whole window, and the file holds 39. The
+  earlier finding still stands too — SchoolHub and CASHI have zero genuine tickets and ~97 rows name
+  no in-scope system at all, which is the already-disclosed NS-534 scope gap, not a fixable count.
+
+**Measured universe for the rebuild** (`project in (IT, INF)`, `created 2025-10-01..2026-09-30`,
+every page followed): `Access Request` **1,380** — 1,350 IT + 30 INF, spread 76–157 per month with no
+gaps; `Onboarding Request` **44**; `Task` 1,144 (mixed, not access-specific). Sampled summaries
+confirm `Access Request` is genuine provisioning traffic across Okta, GitHub, AWS/IAM, Looker,
+databases and SaaS.
+
+**Recommended fix, for a decision first:** define the population by issue type instead of by keyword
+plus triage — `project in (IT, INF) AND issuetype in ("Access Request", "Onboarding Request",
+"Offboarding Request")` over the period, ~1,425 rows, one query, zero filtering, retained raw. It is
+ten times the rows and reproducible to the row, which is what completeness-and-accuracy testing
+needs; the in-scope-system view becomes a summary over it rather than the population itself. The
+trade-off is that it hands the auditor a much larger sampling frame including non-in-scope systems.
+Do not rewrite the IPE until that trade-off is chosen. `analysis_sept14/pull_access_population_raw.py`
+does the pull and the reconciliation; it currently proves the zero-result, and its output was
+deliberately **not** staged or published, since a retained file whose contents say "140 delivered
+keys absent from this pull" is worse than no file.
 
 - **Item 1 — closed by stating the basis, not by dumping the population.** `refresh_vuln_counts.py` re-pulled exact figures from `meta.pagination.total` on `limit=1` queries, and the packet now names both extracts as extracts taken in the platform's own return order, with the population each came from and an offer to produce the full month. The 400-vs-2,000 contradiction in the IPE is gone. The counts CSV itself stayed internal.
 - **Item 2 — the premise was wrong and the re-pull was unnecessary.** See "CrowdStrike alert date fields" below. The June floor is capability onboarding; the fix was capturing the proof (`prove_crowdstrike_retention.py` → ESEC-212), not re-pulling data.
