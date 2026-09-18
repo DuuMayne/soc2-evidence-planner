@@ -1010,6 +1010,73 @@ six populations, which the IPEs now commit to.
 
 ---
 
+### September 18, 2026 (Session 11 — Okta password, sign-on and MFA evidenced per user; Req 72 rebuilt)
+
+**Req 42 / ESEC-166 — password settings, per user instead of per policy.** What was staged described
+four password policies. That evidences how the policies are configured, not that every user is
+governed by one, which is what LS.01 actually claims. All four target the built-in `Everyone` group,
+so they are separated only by Okta's two precedence inputs: ascending `priority`, and
+`conditions.authProvider.provider` matching the user's own credential provider. First match wins and
+evaluation stops. Resolving that per user (496 rows) showed **two of the four policies govern nobody**
+— Active Directory Policy because Earnest's directory sync runs *outbound* (Okta is the source of
+record and pushes to AD, confirmed with Gaige Rogers: Okta → AD → Navient Entra), and Default Policy
+because Main Policy claims the same population at a higher priority. Neither is a gap; both are
+consequences of the precedence rules, and the IPE now says so structurally.
+
+**Dropped a column that would have shipped 50 phantom exceptions.** A `within_policy_max_age` verdict
+comparing `passwordChanged` against `maxAgeDays` is the same error as `reviewDecision` and
+CrowdStrike's `timestamp`: it asks a field a question it cannot answer. **Okta enforces maximum age
+at authentication, not on a timer** — a dormant account's password ages past 60 days while unused and
+is forced to change on next sign-in, which is the control working. The only genuine exception is a
+user who *successfully signed in after* their password passed the maximum. That count is **0** of 50
+flagged (48 aged out while dormant, 2 never logged in). Held internally, not shipped.
+
+**Req 72 / ESEC-179 — four claims in the delivered IPE did not survive checking.** It said the
+sign-on rules span two policies (four), that a "Main MFA Policy requires Okta Verify for All
+Employees" (no such policy; Okta Verify is `OPTIONAL` everywhere), that the security group file held
+private-only RFC1918 ingress (it did not), and — worst — it volunteered **"Gap: Default Policy does
+NOT require MFA for Everyone group"**, handing the auditor a finding that isn't one. Sign-on policies
+obey the same precedence as password policies: Default Policy sits at priority 4 scoped to Everyone,
+Legacy Policy claims the same population at priority 2 and requires a factor, so Default Policy
+governs **0 users**. Resolved per user: Legacy Policy 489, NO MFA 7, FastPass 0, Default 0.
+
+**The same authentication-time resolution applied to MFA.** 27 of 495 accounts hold no active factor,
+which reads as an exception list and is not one: 6 sit in the two named groups the priority-1 NO MFA
+policy is scoped to, 19 cannot authenticate at all (SUSPENDED/PROVISIONED/LOCKED_OUT/
+PASSWORD_EXPIRED), and 2 have never completed a sign-in, so Okta has never reached the point of
+enrolling them. Accounts that **signed in with no factor and no exemption: 0**.
+
+**A filter described as something it isn't is worse than a filter left undescribed.** The security
+group file called itself "151 SGs with private-only ingress (RFC1918)". Nothing in the folder stated
+the real criterion, so the only way to recover it was to re-pull the population and find the
+predicate returning 151 — *has an inbound rule, and none admits `0.0.0.0/0`* (150 still live, one
+since deleted). Sound criterion, described as something else, and it silently removed the 43 groups
+an auditor would most want to see. Rebuilt at 162 rows with the criterion stated, the excluded groups
+present in the retained JSON, and classification computed per row rather than eyeballed: 76 all
+private, 56 restricted to referenced security groups only, 30 admitting a public source by design
+(Cloudflare edge ranges, Looker, named partner SFTP allowlists including Navient and Intuit). Two
+groups admit `172.0.0.0/8` and `172.160.0.0/16` — which look private and are mostly public space,
+since RFC1918 is only `172.16.0.0/12`. Also: the old pull was **us-east-1 only** while calling itself
+production; the account holds 12 more groups across four other regions, unnoticed because no EC2
+instance runs in any of them.
+
+**Checked whether another control already owned the population before rebuilding it.** LS.12
+(ESEC-191) already holds all 216 us-east-1 groups with a `public_ingress` flag, so Req 72 keeps its
+subset and points at LS.12 for the complete set, rather than two controls shipping overlapping
+populations that must agree forever.
+
+**One error of mine, caught before publishing.** First cut of `okta_authenticators.csv` carried a
+`users_enrolled` count derived from each authenticator's `type`. Only `email` was right — an
+authenticator `type` is not a `factorType`, and Okta Verify alone answers to `push`,
+`token:software:totp` and `signed_nonce`. Removed the column; enrolment is evidenced per user
+instead, which is better evidence anyway.
+
+Both IPEs are generated from the retained raw (`generate_okta_password_ipe.py`,
+`generate_okta_session_mfa_ipe.py`) so no figure can drift from its evidence, and the generator
+asserts the banned boilerplate and the old `Gap:` language are absent. 13 files published across the
+two tickets, 7 superseded attachments deleted only after each replacement was confirmed live at
+expected size. Manifest 353 → 358.
+
 ## For Next Year
 
 1. Build proper collectors for each evidence type — automate the full pull-to-upload pipeline

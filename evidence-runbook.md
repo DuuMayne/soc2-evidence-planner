@@ -1254,6 +1254,27 @@ now closed. For live status, pull ESEC with `jira.search_all()` and check the Op
   error, so the response looks like a successful year-long pull. `log_floor()` measures the real
   floor by probing `since=2015-01-01` with `sortOrder=ASCENDING&limit=1`. Run it and put the result
   in the IPE before building any population on the log.
+- **Policies resolve per user, and a settings table cannot show it (added 2026-09-18).** This
+  applies identically to `type=PASSWORD` and `type=OKTA_SIGN_ON`. Okta walks policies in **ascending
+  `priority`** and applies the **first** whose `conditions.people.groups.include` contains the user
+  *and* whose `conditions.authProvider.provider` matches that user's own
+  `credentials.provider.type`. **Evaluation stops at the first match**, so each user is governed by
+  exactly one policy. Consequences that are invisible from a CSV of policy settings: a policy scoped
+  to `Everyone` at a low priority can govern **zero** users because a higher-priority policy claims
+  the same population first; and a `NO MFA` policy sitting at priority 1 governs only the 7 members
+  of its two named groups, not the org. Measured here — password: Main Policy 493, Service Accounts
+  3, AD Policy 0, Default Policy 0; sign-on: Legacy Policy 489, NO MFA 7, FastPass 0, Default 0.
+  Resolve it per user (`pull_okta_password_evidence.py`, `pull_okta_session_mfa_evidence.py`) and
+  carry the reason in the row.
+- **`maxAgeDays` and `requireFactor` are enforced at authentication, not on a timer.** A dormant
+  account's password ages past the maximum while unused and is forced to change on next sign-in, and
+  an account that has never signed in has never been offered factor enrollment. So neither "days
+  since password change > max age" nor "holds no active factor" is an exception on its own. The
+  genuine exception is a **successful sign-in after the boundary** — 0 for both, here.
+- **An authenticator's `type` is not a `factorType`.** Okta Verify answers to `push`,
+  `token:software:totp` and `signed_nonce`, so per-authenticator enrolment counts derived from
+  `type` are wrong for every row except `email`. Count factors per user via
+  `/api/v1/users/{id}/factors`, or per factor type.
 - **Use object state for period coverage, the log for mechanism.** App-assignment and group-
   membership `created` timestamps are current object state, so they span the whole period regardless
   of log retention. Same asymmetry as AWS Backup recovery points vs. job history (lesson 47).
@@ -1432,6 +1453,71 @@ whether records of *any* type predate the boundary.
 
 **Going forward: retain raw from the first run.** Reconstructing provenance after the fact costs far
 more than keeping it, and for retention-limited sources it is not possible at all.
+
+**Status 2026-09-18 — LS.01 Req 42 and LS.06 Req 72 closed, raw retained on both.**
+Req 42 (ESEC-166) first: 496 users, each resolved to the one password policy Okta would actually
+apply. Req 72 (ESEC-179) then got the same treatment for sign-on and multifactor, plus a rebuilt
+security group population. Both folders now hold every API response their CSVs were built from, and
+both IPEs are generated from that raw rather than hand-maintained. Manifest 353 → 358.
+
+New in these two folders: `okta_user_mfa_enrollment.csv` (496 rows — governing sign-on policy, why
+it applies, whether it demands a factor, factors actually registered), `okta_session_mfa_raw.json`,
+`vpn_restricted_security_groups_raw.json`, and a reissued `vpn_restricted_security_groups.csv` at
+162 rows across all five regions. Scripts: `pull_okta_session_mfa_evidence.py`,
+`pull_vpn_restricted_sgs.py`, `generate_okta_session_mfa_ipe.py`,
+`publish_okta_session_mfa_evidence.py`.
+
+**A filter described as something it isn't is worse than a filter left undescribed.** The Req 72 IPE
+called its security group file "151 SGs with private-only ingress (RFC1918)". It was nothing of the
+kind. Reconstructing the criterion from the data — 150 of the 151 still live, one since deleted —
+showed it was *has at least one inbound rule, and none of them admits `0.0.0.0/0`*. That is a
+perfectly sound criterion, and it silently removed the 43 groups an auditor would most want to see.
+Two consequences worth generalising:
+
+- **Reconstruct the filter before you trust the label.** Nothing in the folder stated the criterion,
+  so the only way to know it was to re-pull the population and search for the predicate that returns
+  the staged row count. A label nobody can test is not provenance.
+- **`is_private` is not "starts with 172".** Two groups admit `172.0.0.0/8` and `172.160.0.0/16`,
+  which look private and are mostly public space — RFC1918 is only `172.16.0.0/12`. Classify by
+  computing on the CIDR, never by eye. The rebuilt file carries the classification per row: 76 all
+  private, 56 restricted to referenced security groups only (tighter than a CIDR), 30 admitting a
+  public source by design — Cloudflare edge ranges, Looker, and named partner SFTP allowlists.
+- **Say which region.** The old pull was us-east-1 only while describing itself as production. The
+  account also holds 12 groups across us-west-1/us-west-2/us-east-2/eu-west-1. No EC2 instances run
+  there, which is exactly why nobody noticed.
+
+Three more claims in that same IPE did not survive checking, all of the same species as the
+`reviewDecision` and CrowdStrike `timestamp` traps — a settings table read as an outcome:
+
+- **"5 sign-on rules across 2 policies"** — four policies, five rules.
+- **"Main MFA Policy requires Okta Verify for All Employees"** — no policy of that name exists, and
+  no enrollment policy *requires* Okta Verify; it is `OPTIONAL` everywhere it appears.
+- **"Gap: Default Policy does NOT require MFA for Everyone group"** — the IPE handed the auditor a
+  finding that isn't one. Okta sign-on policies obey the same precedence as password policies:
+  ascending priority, first group match wins, evaluation stops. Default Policy sits at priority 4
+  scoped to Everyone; Legacy Policy matches the same population at priority 2 and requires a factor,
+  so Default Policy governs **0 users** and its settings never apply to a sign-on. Resolved per
+  user: Legacy Policy 489, NO MFA 7, Okta FastPass 0, Default Policy 0.
+
+**Okta enforces the factor requirement at authentication, so "no MFA factor" needs the same
+resolution as "password past max age".** 27 of 495 accounts hold no active factor, which reads as an
+exception list and is not one. 6 sit in the two named groups the priority-1 NO MFA policy is scoped
+to (`ACT Temporary Non-MFA Group`, `QA-Infra Service Accounts`), 19 cannot authenticate at all
+(SUSPENDED / PROVISIONED / LOCKED_OUT / PASSWORD_EXPIRED), and 2 have never completed a sign-in — so
+they have never reached the point where Okta would enroll them. Accounts that **signed in with no
+factor and no exemption: 0**. Held in `okta_mfa_factor_resolution.json`, not shipped as a column,
+for the same reason `within_policy_max_age` was dropped from Req 42.
+
+**Don't invent a per-authenticator enrolment count.** First cut of `okta_authenticators.csv` carried
+`users_enrolled` derived from the authenticator's `type`, and only `email` was right: an
+authenticator `type` is not a `factorType`, and Okta Verify alone answers to `push`,
+`token:software:totp` and `signed_nonce`. The count belongs per user, or per factor type in the raw
+— never per authenticator row.
+
+**Check whether another control already owns the population.** Before rebuilding Req 72's security
+groups as a full population, LS.12 (ESEC-191) turned out to already hold all 216 us-east-1 groups
+with a `public_ingress` flag. So Req 72 keeps its subset and the IPE points at LS.12 for the
+complete set, instead of two controls shipping overlapping populations that have to agree forever.
 
 ## IPE Checklist
 
